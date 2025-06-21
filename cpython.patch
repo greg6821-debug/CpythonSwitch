@@ -1,3 +1,15 @@
+diff -Naur a/Include/pyport.h b/Include/pyport.h
+--- a/Include/pyport.h
++++ b/Include/pyport.h
+@@ -838,7 +838,7 @@ extern _invalid_parameter_handler _Py_silent_invalid_parameter_handler;
+ #  error "Py_TRACE_REFS ABI is not compatible with release and debug ABI"
+ #endif
+ 
+-#if defined(__ANDROID__) || defined(__VXWORKS__)
++#if defined(__ANDROID__) || defined(__VXWORKS__) || defined(__SWITCH__)
+    /* Ignore the locale encoding: force UTF-8 */
+ #  define _Py_FORCE_UTF8_LOCALE
+ #endif
 diff -Naur a/Lib/posixpath.py b/Lib/posixpath.py
 --- a/Lib/posixpath.py
 +++ b/Lib/posixpath.py
