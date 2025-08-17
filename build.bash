@@ -13,19 +13,19 @@ export LOCAL_PREFIX=$(realpath local_prefix)
 popd
 cp ../cpython_config_files/Setup.local build-switch/Modules
 pushd build-switch
-make -j $(getconf _NPROCESSORS_ONLN) libpython3.9.a
+make -j $(getconf _NPROCESSORS_ONLN) libpython3.8.a
 mkdir -p $LOCAL_PREFIX/lib
-cp libpython3.9.a $LOCAL_PREFIX/lib/libpython3.9.a
+cp libpython3.8.a $LOCAL_PREFIX/lib/libpython3.8.a
 make libinstall
 make inclinstall
 popd
 popd
 
-mkdir -p ./python39-switch
+mkdir -p ./python38-switch
 
-mv $LOCAL_PREFIX/* ./python39-switch/
+mv $LOCAL_PREFIX/* ./python38-switch/
 
-pushd python39-switch/lib/python3.9
+pushd python38-switch/lib/python3.8
 rm -r test
 rm -r lib2to3/tests
 rm subprocess.py

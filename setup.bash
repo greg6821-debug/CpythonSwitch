@@ -1,7 +1,7 @@
 set -e
 
 export DEVKITPRO=/opt/devkitpro
-export RENPY_VER=8.3.7
+export RENPY_VER=8.0.0
 export PYGAME_SDL2_VER=2.1.0
 
 apt-get -y update
@@ -20,10 +20,10 @@ python3 --version
 
 apt -y install build-essential checkinstall
 
-git clone --branch v3.9.22 --single-branch https://github.com/python/cpython.git
+git clone --branch master --single-branch https://github.com/DavidBuchanan314/cpython.git
 
-pushd cpython
-patch -p1 < ../cpython.patch
-popd
+#pushd cpython
+#patch -p1 < ../cpython.patch
+#popd
 
 /bin/bash -c 'sed -i'"'"'.bak'"'"' '"'"'s/set(CMAKE_EXE_LINKER_FLAGS_INIT "/set(CMAKE_EXE_LINKER_FLAGS_INIT "-fPIC /'"'"' $DEVKITPRO/cmake/Switch.cmake'
