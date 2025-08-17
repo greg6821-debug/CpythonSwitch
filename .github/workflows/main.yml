@@ -5,7 +5,7 @@ on: [push]
 jobs:
     build-artifact:
         name: Build
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-14.04
         container: devkitpro/devkita64:20241023
 
         steps:
@@ -23,8 +23,8 @@ jobs:
         - name: build
           run: sudo bash build.bash
 
-        - name: upload python39-switch
+        - name: upload python38-switch
           uses: actions/upload-artifact@master
           with:
-            name: python39-switch
-            path: python39-switch
+            name: python38-switch
+            path: python38-switch
