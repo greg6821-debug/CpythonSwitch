@@ -61,6 +61,7 @@ jobs:
           which aarch64-none-elf-gcc
 
       - name: Build test .nro
+        shell: bash
         run: |
           source $DEVKITPRO/switchvars.sh
           mkdir -p switch/build
@@ -71,6 +72,7 @@ jobs:
               -O2 -o build/python39-test.elf
           nacptool --create "Python 3.9 Test" "CPythonSwitch" "0.1.0" build/python39-test.nacp
           elf2nro build/python39-test.elf build/python39-test.nro --nacp=build/python39-test.nacp --romfsdir=romfs
+
 
 
       - name: Upload test NRO
