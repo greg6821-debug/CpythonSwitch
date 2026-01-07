@@ -37,7 +37,13 @@ jobs:
 
       - name: Build CPython for Switch
         run: bash build.bash
-
+        
+      - name: Upload python39-switch artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: python39-switch
+          path: python39-switch
+          
       - name: Check libnx
         run: ls -la $DEVKITPRO/libnx/lib
 
@@ -52,8 +58,4 @@ jobs:
           name: test_python_nro
           path: switch/test_python.nro
 
-      - name: Upload python39-switch artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: python39-switch
-          path: python39-switch
+
