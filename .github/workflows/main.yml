@@ -66,6 +66,7 @@ jobs:
           source $DEVKITPRO/switchvars.sh
           mkdir -p switch/build
           cd switch
+
           aarch64-none-elf-gcc \
             -I../python39-switch/include/python3.9 \
             -I$DEVKITPRO/libnx/include \
