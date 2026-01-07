@@ -62,6 +62,8 @@ jobs:
 
       - name: Build test .nro
         run: |
+          source $DEVKITPRO/switchvars.sh
+          mkdir -p switch/build
           cd switch
           aarch64-none-elf-gcc -I../python39-switch/include/python3.9 \
               source/main.c \
@@ -69,6 +71,7 @@ jobs:
               -O2 -o build/python39-test.elf
           nacptool --create "Python 3.9 Test" "CPythonSwitch" "0.1.0" build/python39-test.nacp
           elf2nro build/python39-test.elf build/python39-test.nro --nacp=build/python39-test.nacp --romfsdir=romfs
+
 
       - name: Upload test NRO
         uses: actions/upload-artifact@v4
