@@ -4,6 +4,15 @@ BUILD := build
 SOURCES := source/main.c
 ROMFS := romfs
 
+
+$(info ===== DEBUG =====)
+$(info DEVKITPRO=$(DEVKITPRO))
+$(info PLATFORM=$(PLATFORM))
+$(info CFLAGS=$(CFLAGS))
+$(info LIBS=$(LIBS))
+$(info =================)
+
+
 ifndef DEVKITPRO
 $(error DEVKITPRO is not set)
 endif
