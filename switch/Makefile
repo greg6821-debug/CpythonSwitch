@@ -32,6 +32,16 @@ $(info LIBS=$(LIBS))
 $(info =================)
 
 # ============================
+# Отладка: вывод содержимого DEVKITPRO
+# ============================
+.PHONY: list-devkitpro
+list-devkitpro:
+	@echo "===== Listing DEVKITPRO folder ====="
+	@find $(DEVKITPRO) -type d -exec echo "Directory: {}" \;
+	@find $(DEVKITPRO) -type f -exec echo "File: {}" \;
+	@echo "===== End of DEVKITPRO listing ====="
+
+# ============================
 # Include devkitPro rules
 # ============================
 include $(DEVKITPRO)/libnx/switch_rules
