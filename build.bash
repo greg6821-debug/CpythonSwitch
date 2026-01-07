@@ -17,7 +17,8 @@ export LOCAL_PREFIX=$(realpath local_prefix)
   --disable-shared \
   --without-pymalloc \
   LDFLAGS="-specs=$DEVKITPRO/libnx/switch.specs $LDFLAGS" \
-  CONFIG_SITE="config.site"popd
+  CONFIG_SITE="config.site"
+popd
 cp ../cpython_config_files/Setup.local build-switch/Modules
 pushd build-switch
 make -j $(getconf _NPROCESSORS_ONLN) libpython3.9.a
