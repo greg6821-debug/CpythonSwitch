@@ -4,7 +4,7 @@ TARGET := $(BUILD)/$(APP)
 
 DEVKITPRO ?= /opt/devkitpro
 
-include $(DEVKITPRO)/libnx/rules
+include $(DEVKITPRO)/switch_rules
 
 CFLAGS += -I../python39-switch/include/python3.9
 CFLAGS += -O2
