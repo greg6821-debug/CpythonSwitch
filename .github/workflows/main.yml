@@ -16,6 +16,21 @@ jobs:
       - name: Show DEVKITPRO path
         run: echo "DEVKITPRO=$DEVKITPRO"
 
+
+      - name: Setup devkitPro
+        uses: devkitPro/setup-devkitpro@v1
+        with:
+          install: true
+          pacman-packages: |
+            switch-dev
+            devkitA64
+            libnx
+    
+      - name: Build
+        run: |
+          make
+
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
