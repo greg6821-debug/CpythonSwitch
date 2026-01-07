@@ -55,6 +55,12 @@ jobs:
           cp -r python39-switch/lib/python3.9 switch/romfs/lib/
           cp tests/renpy_smoketest.py switch/romfs/
 
+      - name: Debug devkitPro paths
+        run: |
+          echo DEVKITPRO=$DEVKITPRO
+          ls $DEVKITPRO
+          ls $DEVKITPRO/libnx
+
       - name: Build test .nro
         run: |
           cd switch
