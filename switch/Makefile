@@ -19,9 +19,8 @@ endif
 # CPython headers
 CFLAGS += -I../python39-switch/include/python3.9
 # Link against static Python + libnx
-LIBS += \
-../python39-switch/lib/libpython3.9.a \
--lnx -lm -lz
+LIBS += ../python39-switch/lib/libpython3.9.a \
+        -L$(DEVKITPRO)/libnx/lib -lnx -lm -lz
 # ============================
 # Debug output (optional)
 # ============================
