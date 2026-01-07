@@ -9,8 +9,15 @@ cp ../cpython_config_files/config.site build-switch
 pushd build-switch
 mkdir local_prefix
 export LOCAL_PREFIX=$(realpath local_prefix)
-../configure LDFLAGS="-specs=$DEVKITPRO/libnx/switch.specs $LDFLAGS" CONFIG_SITE="config.site" --host=aarch64-none-elf --build=$(../config.guess) --prefix="$LOCAL_PREFIX" --disable-ipv6 --disable-shared --enable-optimizations
-popd
+../configure \
+  --host=aarch64-none-elf \
+  --build=$(../config.guess) \
+  --prefix="$LOCAL_PREFIX" \
+  --disable-ipv6 \
+  --disable-shared \
+  --without-pymalloc \
+  LDFLAGS="-specs=$DEVKITPRO/libnx/switch.specs $LDFLAGS" \
+  CONFIG_SITE="config.site"popd
 cp ../cpython_config_files/Setup.local build-switch/Modules
 pushd build-switch
 make -j $(getconf _NPROCESSORS_ONLN) libpython3.9.a
