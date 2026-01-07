@@ -27,6 +27,17 @@ jobs:
       - name: Build CPython for Switch
         run: bash build.bash
 
+      - name: Build test Python NRO
+        run: |
+          cd switch
+          make
+
+      - name: Upload test_python.nro
+        uses: actions/upload-artifact@v4
+        with:
+          name: test_python_nro
+          path: switch/test_python.nro
+
       - name: Upload python39-switch artifact
         uses: actions/upload-artifact@v4
         with:
