@@ -1,4 +1,4 @@
-name: Build CPython 3.9 for Nintendo Switch
+name: Build CPython 3.9 for Switch
 
 run-name: ${{ github.actor }} is building CPython for Switch 🚀
 
@@ -8,12 +8,12 @@ on:
 
 jobs:
   build-artifact:
-    name: Build
+    name: Build python39-switch
     runs-on: ubuntu-latest
     container: devkitpro/devkita64:20241023
 
     steps:
-      - name: Show DEVKITPRO path
+      - name: Show DEVKITPRO
         run: echo "DEVKITPRO=$DEVKITPRO"
 
       - name: Checkout repository
@@ -27,7 +27,7 @@ jobs:
       - name: Build CPython for Switch
         run: bash build.bash
 
-      - name: Upload python39-switch artifact
+      - name: Upload python39-switch
         uses: actions/upload-artifact@v4
         with:
           name: python39-switch
@@ -55,20 +55,23 @@ jobs:
           cp -r python39-switch/lib/python3.9 switch/romfs/lib/
           cp tests/renpy_smoketest.py switch/romfs/
 
-      - name: Debug devkitPro paths
+      - name: Ensure devkitA64 compiler is in PATH
         run: |
-          echo DEVKITPRO=$DEVKITPRO
-          ls $DEVKITPRO
-          ls $DEVKITPRO/libnx
+          export PATH=$DEVKITPRO/devkitA64/bin:$PATH
+          which aarch64-none-elf-gcc
 
       - name: Build test .nro
         run: |
           cd switch
-          make
+          aarch64-none-elf-gcc -I../python39-switch/include/python3.9 \
+              source/main.c \
+              ../python39-switch/lib/libpython3.9.a -lz -lm -lnx \
+              -O2 -o build/python39-test.elf
+          nacptool --create "Python 3.9 Test" "CPythonSwitch" "0.1.0" build/python39-test.nacp
+          elf2nro build/python39-test.elf build/python39-test.nro --nacp=build/python39-test.nacp --romfsdir=romfs
 
       - name: Upload test NRO
         uses: actions/upload-artifact@v4
         with:
           name: python39-test-nro
           path: switch/build/python39-test.nro
-
