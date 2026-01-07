@@ -39,9 +39,7 @@ include $(DEVKITPRO)/libnx/switch_rules
 # ============================
 # Targets
 # ============================
-$(TARGET).nso: $(TARGET)
-	$(DEVKITPRO)/tools/bin/elf2nso $< $@
-#all: $(TARGET).nro
+all: $(TARGET).nro
 
 # ============================
 # Clean
