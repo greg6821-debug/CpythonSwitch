@@ -12,7 +12,11 @@ LIBS := \
 SOURCES := source/main.c
 ROMFS := romfs
 
-all: $(TARGET).nro
+all: env $(TARGET).nro
+
+env:
+	@echo "Loading DevkitPro env"
+	@. $(DEVKITPRO)/switchvars.sh
 
 $(TARGET).elf: $(SOURCES)
 	mkdir -p $(BUILD)
