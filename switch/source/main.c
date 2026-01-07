@@ -31,15 +31,6 @@ static PyObject* py_nx_sleep(PyObject* self, PyObject* args) {
     Py_RETURN_NONE;
 }
 
-static PyMethodDef NxMethods[] = {
-    {"sleep", py_nx_sleep, METH_VARARGS, "Sleep for given seconds using libnx"},
-    {NULL, NULL, 0, NULL}
-};
-
-PyMODINIT_FUNC init_nx(void) {
-    Py_InitModule("_nx", NxMethods);
-}
-
 int main(int argc, char* argv[]) {
     userAppInit();
 
@@ -50,12 +41,6 @@ int main(int argc, char* argv[]) {
     Py_DontWriteBytecodeFlag = 1;
     Py_OptimizeFlag = 2;
 
-    // Встроенные модули
-    static struct _inittab builtins[] = {
-        {"_nx", init_nx},
-        {NULL, NULL}
-    };
-    PyImport_ExtendInittab(builtins);
 
     // Инициализация Python
     Py_InitializeEx(0);
