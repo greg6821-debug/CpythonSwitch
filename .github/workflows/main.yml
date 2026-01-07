@@ -36,10 +36,10 @@ jobs:
       - name: Build CPython for Switch
         run: bash build.bash
 
-      - name: Build test Python NRO
+      - name: Build test Python NRO (debug)
         run: |
           cd switch
-          make
+          make V=1 --debug=v
 
       - name: Upload test_python.nro
         uses: actions/upload-artifact@v4
