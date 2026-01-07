@@ -30,8 +30,7 @@ jobs:
         with:
           submodules: recursive
           
-      - name: Install Switch development packages
-        run: dkp-pacman -Syu --noconfirm && dkp-pacman -S --noconfirm switch-dev
+
         
       - name: Setup CPython for Switch
         run: bash setup.bash
