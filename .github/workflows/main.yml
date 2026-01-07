@@ -58,7 +58,10 @@ jobs:
       - name: Build test .nro
         run: |
           cd switch
-          make clean
+          rm -rf build
+          mkdir -p build
+          # подключаем devkitA64
+          source $DEVKITPRO/switchvars.sh
           make
 
       - name: Upload test NRO
