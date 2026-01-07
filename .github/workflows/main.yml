@@ -1,30 +1,34 @@
-name: GitHub Actions Demo
-run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
-on: [push]
+name: Build CPython 3.9 for Nintendo Switch
+
+run-name: ${{ github.actor }} is building CPython for Switch 🚀
+
+on:
+  push:
+  workflow_dispatch:
 
 jobs:
-    build-artifact:
-        name: Build
-        runs-on: ubuntu-latest
-        container: devkitpro/devkita64:20241023
+  build-artifact:
+    name: Build
+    runs-on: ubuntu-latest
+    container: devkitpro/devkita64:20241023
 
-        steps:
-        - name: Check for dockerenv file
-          run: echo $DEVKITPRO
-            
-        - name: checkout repository
-          uses: actions/checkout@master
-          with:
-            submodules: recursive
-            
-        - name: setup environment
-          run: sudo bash setup.bash
-        
-        - name: build
-          run: sudo bash build.bash
+    steps:
+      - name: Show DEVKITPRO path
+        run: echo "DEVKITPRO=$DEVKITPRO"
 
-        - name: upload python39-switch
-          uses: actions/upload-artifact@master
-          with:
-            name: python39-switch
-            path: python39-switch
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup CPython for Switch
+        run: bash setup.bash
+
+      - name: Build CPython for Switch
+        run: bash build.bash
+
+      - name: Upload python39-switch artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: python39-switch
+          path: python39-switch
