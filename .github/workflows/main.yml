@@ -39,7 +39,7 @@ jobs:
       - name: Build test Python NRO (debug)
         run: |
           cd switch
-          make V=1 --debug=v
+          make all V=1 --debug=v
 
       - name: Upload test_python.nro
         uses: actions/upload-artifact@v4
