@@ -110,7 +110,7 @@ diff -Naur a/Modules/Setup b/Modules/Setup
 +_zoneinfo _zoneinfo.c	# zoneinfo accelerator
 +_bisect _bisectmodule.c	# Bisection algorithms
 +_heapq _heapqmodule.c	# Heap queue algorithm
-+_asyncio _asynciomodule.c  # Fast asyncio Future
++#_asyncio _asynciomodule.c  # Fast asyncio Future
 +_json -I$(srcdir)/Include/internal -DPy_BUILD_CORE_BUILTIN _json.c	# _json speedups
 +_statistics _statisticsmodule.c # statistics accelerator
  
@@ -128,7 +128,7 @@ diff -Naur a/Modules/Setup b/Modules/Setup
  
  # Socket module helper for socket(2)
 -#_socket socketmodule.c
-+_socket socketmodule.c
++#_socket socketmodule.c
  
  # Socket module helper for SSL support; you must comment out the other
  # socket line above, and possibly edit the SSL variable:
