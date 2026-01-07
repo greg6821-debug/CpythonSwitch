@@ -34,13 +34,13 @@ _codecs_jp cjkcodecs/_codecs_jp.c
 _codecs_kr cjkcodecs/_codecs_kr.c
 _codecs_tw cjkcodecs/_codecs_tw.c
 _csv _csv.c
-_ctypes_test _ctypes/_ctypes_test.c
+#_ctypes_test _ctypes/_ctypes_test.c
 _heapq _heapqmodule.c        # Heapq type
 _json _json.c
 _locale _localemodule.c  # -lintl
 _lsprof _lsprof.c rotatingtree.c
 _multibytecodec cjkcodecs/multibytecodec.c
-_socket socketmodule.c
+#_socket socketmodule.c
 _sre _sre.c            # Fredrik Lundh's new regular expressions
 _symtable symtablemodule.c
 #_testcapi _testcapimodule.c    # Python C API test module
@@ -49,11 +49,11 @@ audioop audioop.c
 #bz2 _bz2module.c -lbz2 # ???
 cmath cmathmodule.c _math.c # -lm # complex math library functions
 errno errnomodule.c        # posix (UNIX) errno values
-fcntl fcntlmodule.c    # fcntl(2) and ioctl(2)
-parser parsermodule.c
+#fcntl fcntlmodule.c    # fcntl(2) and ioctl(2)
+#parser parsermodule.c
 posix posixmodule.c        # posix (UNIX) system calls
 unicodedata unicodedata.c    # static Unicode character database
-xx xxmodule.c
+#xx xxmodule.c
 xxsubtype xxsubtype.c
 
 # The following will not build, but is specified in renpy-build:
