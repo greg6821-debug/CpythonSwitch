@@ -20,8 +20,7 @@ endif
 CFLAGS += -I../python39-switch/include/python3.9
 # Link against static Python + libnx
 LIBS += \
-../python39-switch/lib/libpython3.9.a \
--lm -lz
+../python39-switch/lib/libpython3.9.a
 
 # ДО include switch_rules
 CC := $(DEVKITPRO)/devkitA64/bin/aarch64-none-elf-gcc
