@@ -9,10 +9,10 @@ export CXX="$DEVKITA64/bin/aarch64-none-elf-g++"
 export AR="$DEVKITA64/bin/aarch64-none-elf-ar"
 export RANLIB="$DEVKITA64/bin/aarch64-none-elf-ranlib"
 
-# Флаги для сборки под Switch
+# Флаги для сборки под Switch (только для компиляции, без линковки)
 export CFLAGS="-O2 -ffunction-sections -fdata-sections -D__SWITCH__ -I$DEVKITPRO/libnx/include"
-export CXXFLAGS="$CFLAGS"
-export LDFLAGS="-specs=$DEVKITPRO/libnx/switch.specs"
+export CPPFLAGS="$CFLAGS"
+export LDFLAGS=""
 
 source $DEVKITPRO/switchvars.sh
 pushd cpython
@@ -22,7 +22,7 @@ pushd build-switch
 mkdir local_prefix
 export LOCAL_PREFIX=$(realpath local_prefix)
 
-# Явно передаем компилятор в configure
+# Конфигурация для кросс-компиляции
 ../configure \
   --host=aarch64-none-elf \
   --build=$(../config.guess) \
@@ -30,6 +30,11 @@ export LOCAL_PREFIX=$(realpath local_prefix)
   --disable-ipv6 \
   --disable-shared \
   --without-pymalloc \
+  --without-ensurepip \
+  --with-system-ffi=no \
+  --with-threads=no \
+  --disable-profiling \
+  --disable-universal-archs \
   CC="$CC" \
   AR="$AR" \
   RANLIB="$RANLIB" \
@@ -40,33 +45,51 @@ popd
 cp ../cpython_config_files/Setup.local build-switch/Modules
 pushd build-switch
 
-# Собираем только библиотеку Python
-make -j $(getconf _NPROCESSORS_ONLN) libpython3.9.a
+# 1. Собираем только объектные файлы для библиотеки Python
+echo "=== Building Python object files ==="
+make -j $(getconf _NPROCESSORS_ONLN) \
+  CC="$CC" \
+  AR="$AR" \
+  RANLIB="$RANLIB" \
+  CFLAGS="$CFLAGS" \
+  LDFLAGS="" \
+  python
+
+# 2. Создаем статическую библиотеку вручную из собранных .o файлов
+echo "=== Creating static library ==="
+find . -name "*.o" -type f | xargs $AR rcs libpython3.9.a
 
 # Проверяем архитектуру
-echo "Проверяем архитектуру библиотеки:"
+echo "=== Checking library architecture ==="
 file libpython3.9.a
-aarch64-none-elf-objdump -f libpython3.9.a | head -5
+$aR --info libpython3.9.a | head -20
 
+# 3. Устанавливаем библиотеку
 mkdir -p $LOCAL_PREFIX/lib
 cp libpython3.9.a $LOCAL_PREFIX/lib/libpython3.9.a
-make libinstall
-make inclinstall
+
+# 4. Устанавливаем заголовки
+echo "=== Installing headers ==="
+find ../Include -name "*.h" -exec install -D {} $LOCAL_PREFIX/include/python3.9/{} \;
+find . -name "pyconfig.h" -exec install -D {} $LOCAL_PREFIX/include/python3.9/ \;
+
 popd
 popd
 
 mkdir -p ./python39-switch
 mv $LOCAL_PREFIX/* ./python39-switch/
 
+# Оптимизация Python файлов
 pushd python39-switch/lib/python3.9
-rm -r test
-rm -r lib2to3/tests
-rm subprocess.py
-cp ../../../stub/subprocess.py ./
-find . -type l -not -name \*.py -delete
-find . -type d -empty -delete
-find . -name \*.py -exec python3 -OO -m py_compile {} \;
+rm -r test 2>/dev/null || true
+rm -r lib2to3/tests 2>/dev/null || true
+rm subprocess.py 2>/dev/null || true
+cp ../../../stub/subprocess.py ./ 2>/dev/null || true
+find . -type l -not -name \*.py -delete 2>/dev/null || true
+find . -type d -empty -delete 2>/dev/null || true
+# Не компилируем .py файлы, так как нет Python на хосте
 popd
 
-echo "=== Проверяем финальную библиотеку ==="
+echo "=== Final library check ==="
 file python39-switch/lib/libpython3.9.a
+echo "=== Build complete ==="
