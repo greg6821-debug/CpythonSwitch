@@ -22,6 +22,12 @@ CFLAGS += -I../python39-switch/include/python3.9
 LIBS += \
 ../python39-switch/lib/libpython3.9.a \
 -lm -lz
+
+# ДО include switch_rules
+CC := $(DEVKITPRO)/devkitA64/bin/aarch64-none-elf-gcc
+LD := $(DEVKITPRO)/devkitA64/bin/aarch64-none-elf-ld
+AR := $(DEVKITPRO)/devkitA64/bin/aarch64-none-elf-ar
+
 # ============================
 # Debug output (optional)
 # ============================
