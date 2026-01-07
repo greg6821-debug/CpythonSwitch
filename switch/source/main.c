@@ -1,4 +1,6 @@
 #include <switch.h>
+#include <nx/hid.h>
+#include <nx/console.h>
 #include <Python.h>
 #include <stdio.h>
 
