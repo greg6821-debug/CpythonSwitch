@@ -7,9 +7,20 @@ pushd cpython
 mkdir build-switch
 cp ../cpython_config_files/config.site build-switch
 pushd build-switch
+
+export CONFIG_SITE=$(pwd)/config.site
+
 mkdir local_prefix
 export LOCAL_PREFIX=$(realpath local_prefix)
-../configure LDFLAGS="-specs=$DEVKITPRO/libnx/switch.specs $LDFLAGS" CONFIG_SITE="config.site" --host=aarch64-none-elf --build=$(../config.guess) --prefix="$LOCAL_PREFIX" --disable-ipv6 --disable-shared --enable-optimizations
+
+../configure \
+  --host=aarch64-none-elf \
+  --build=$(../config.guess) \
+  --prefix="$LOCAL_PREFIX" \
+  --disable-ipv6 \
+  --disable-shared \
+  --without-pymalloc \
+  LDFLAGS="-specs=$DEVKITPRO/libnx/switch.specs $LDFLAGS"
 popd
 cp ../cpython_config_files/Setup.local build-switch/Modules
 pushd build-switch
