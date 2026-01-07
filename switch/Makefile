@@ -39,11 +39,8 @@ include $(DEVKITPRO)/libnx/switch_rules
 # ============================
 # Targets
 # ============================
-add_custom_target(${PROJECT_NAME}.nso ALL
-    COMMAND ${DEVKITPRO}/tools/bin/elf2nso
-        ${PROJECT_NAME}
-        ${PROJECT_NAME}.nso
-    DEPENDS ${PROJECT_NAME}
+$(TARGET).nso: $(TARGET)
+	$(DEVKITPRO)/tools/bin/elf2nso $< $@
 #all: $(TARGET).nro
 
 # ============================
