@@ -3,6 +3,7 @@ BUILD := build
 TARGET := $(BUILD)/$(APP)
 
 CFLAGS += -I../python39-switch/include/python3.9
+CFLAGS += -I$(DEVKITPRO)/libnx/include
 CFLAGS += -O2
 
 LIBS := \
@@ -12,11 +13,7 @@ LIBS := \
 SOURCES := source/main.c
 ROMFS := romfs
 
-all: env $(TARGET).nro
-
-env:
-	@echo "Loading DevkitPro env"
-	@. $(DEVKITPRO)/switchvars.sh
+all: $(TARGET).nro
 
 $(TARGET).elf: $(SOURCES)
 	mkdir -p $(BUILD)
