@@ -2,13 +2,15 @@ APP := python39-test
 BUILD := build
 TARGET := $(BUILD)/$(APP)
 
+# Include paths
 CFLAGS += -I../python39-switch/include/python3.9
 CFLAGS += -I$(DEVKITPRO)/libnx/include
 CFLAGS += -O2
 
+# Libraries
 LIBS := \
 	../python39-switch/lib/libpython3.9.a \
-	-lz -lm -lnx
+	-L$(DEVKITPRO)/libnx/lib -lnx -lm
 
 SOURCES := source/main.c
 ROMFS := romfs
@@ -21,7 +23,4 @@ $(TARGET).elf: $(SOURCES)
 
 $(TARGET).nro: $(TARGET).elf
 	nacptool --create "Python 3.9 Test" "CPythonSwitch" "0.1.0" $(TARGET).nacp
-	elf2nro $(TARGET).elf $@ --nacp=$(TARGET).nacp --romfsdir=$(ROMFS)
-
-clean:
-	rm -rf $(BUILD)
+	elf2nro $(TARGET).elf $@ --n
