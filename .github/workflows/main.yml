@@ -38,6 +38,9 @@ jobs:
       - name: Build CPython for Switch
         run: bash build.bash
 
+      - name: Check libnx
+        run: ls -la $DEVKITPRO/libnx/lib
+
       - name: Build test Python NRO (debug)
         run: |
           cd switch
