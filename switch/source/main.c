@@ -1,41 +1,82 @@
 #include <switch.h>
-#include <hid.h>
-#include <console.h>
 #include <Python.h>
 #include <stdio.h>
 
-int main(int argc, char **argv)
-{
-    consoleInit(NULL);
+void userAppInit(void) {
+    // Инициализация romfs и SD-карты
+    fsdevMountSdmc();
+    romfsInit();
 
-    printf("Starting Python...\n");
+    // Перенаправляем stdout / stderr в файл на SD
+    freopen("sdmc:/renpy_switch.log", "w", stdout);
+    freopen("sdmc:/renpy_switch.log", "w", stderr);
 
-    Py_SetProgramName(L"python");
-    Py_Initialize();
+    printf("=== Python Switch smoketest launcher started ===\n");
+}
 
-    FILE *fp = fopen("romfs:/renpy_smoketest.py", "r");
-    if (!fp) {
-        printf("Failed to open test script\n");
+void userAppExit(void) {
+    romfsExit();
+}
+
+// Простая функция для sleep из libnx, чтобы проверить модуль _nx
+static PyObject* py_nx_sleep(PyObject* self, PyObject* args) {
+    double seconds;
+    if (!PyArg_ParseTuple(args, "d", &seconds))
+        return NULL;
+
+    uint64_t ns = (uint64_t)(seconds * 1000000000ULL);
+    Py_BEGIN_ALLOW_THREADS
+    svcSleepThread(ns);
+    Py_END_ALLOW_THREADS
+    Py_RETURN_NONE;
+}
+
+static PyMethodDef NxMethods[] = {
+    {"sleep", py_nx_sleep, METH_VARARGS, "Sleep for given seconds using libnx"},
+    {NULL, NULL, 0, NULL}
+};
+
+PyMODINIT_FUNC init_nx(void) {
+    Py_InitModule("_nx", NxMethods);
+}
+
+int main(int argc, char* argv[]) {
+    userAppInit();
+
+    // Python flags
+    Py_NoSiteFlag = 1;
+    Py_IgnoreEnvironmentFlag = 1;
+    Py_NoUserSiteDirectory = 1;
+    Py_DontWriteBytecodeFlag = 1;
+    Py_OptimizeFlag = 2;
+
+    // Встроенные модули
+    static struct _inittab builtins[] = {
+        {"_nx", init_nx},
+        {NULL, NULL}
+    };
+    PyImport_ExtendInittab(builtins);
+
+    // Инициализация Python
+    Py_InitializeEx(0);
+
+    // Устанавливаем домашнюю директорию
+    setenv("HOME", "/save", 1);
+
+    // Загружаем и выполняем smoketest
+    FILE* test_file = fopen("romfs:/renpy_smoketest.py", "r");
+    if (!test_file) {
+        printf("Could not find renpy_smoketest.py\n");
         Py_Finalize();
-        consoleUpdate(NULL);
-        while (appletMainLoop()) svcSleepThread(1e9);
+        userAppExit();
+        return 1;
     }
 
-    PyRun_SimpleFile(fp, "renpy_smoketest.py");
-    fclose(fp);
+    PyRun_SimpleFile(test_file, "renpy_smoketest.py");
+    fclose(test_file);
 
     Py_Finalize();
+    userAppExit();
 
-    printf("Python finished\n");
-    consoleUpdate(NULL);
-
-    while (appletMainLoop()) {
-        hidScanInput();
-        if (hidKeysDown(CONTROLLER_P1_AUTO) & KEY_PLUS)
-            break;
-        consoleUpdate(NULL);
-    }
-
-    consoleExit(NULL);
     return 0;
 }
