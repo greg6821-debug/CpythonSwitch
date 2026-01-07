@@ -13,8 +13,17 @@ jobs:
     container: devkitpro/devkita64:20241023
 
     steps:
-      - name: Show DEVKITPRO path
-        run: echo "DEVKITPRO=$DEVKITPRO"
+      - name: List DEVKITPRO directory
+        run: |
+          echo "DEVKITPRO path: $DEVKITPRO"
+          if [ -d "$DEVKITPRO" ]; then
+            echo "DEVKITPRO exists"
+            ls -la "$DEVKITPRO"
+            echo "devkitA64 directory:"
+            ls -la "$DEVKITPRO/devkitA64/" || true
+          else
+            echo "DEVKITPRO directory not found!"
+          fi
 
       - name: Checkout repository
         uses: actions/checkout@v4
