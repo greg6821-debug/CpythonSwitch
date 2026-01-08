@@ -1,39 +1,29 @@
-#!/bin/bash
 set -e
 
-echo "=== Setting up Python 3.9 build environment ==="
+export DEVKITPRO=/opt/devkitpro
+export RENPY_VER=8.3.7
+export PYGAME_SDL2_VER=2.1.0
 
-# Установка системных зависимостей[citation:1]
-sudo apt-get update
-sudo apt-get install -y \
-    build-essential \
-    zlib1g-dev \
-    libffi-dev \
-    libssl-dev \
-    libbz2-dev \
-    libreadline-dev \
-    libsqlite3-dev \
-    liblzma-dev \
-    pkg-config
+apt-get -y update
+apt-get -y upgrade
 
-# Скачивание и распаковка CPython
-if [ ! -d "CPython-3.9.22" ]; then
-    wget https://www.python.org/ftp/python/3.9.22/Python-3.9.22.tar.xz
-    tar -xf Python-3.9.22.tar.xz
-    mv Python-3.9.22 CPython-3.9.22
-fi
+apt -y install build-essential checkinstall
+apt -y install libncursesw5-dev libssl-dev libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev
 
-# Применение патча с проверкой
-cd CPython-3.9.22
-if [ -f "../cpython.patch" ]; then
-    echo "Applying cpython.patch..."
-    if ! patch -p1 -N < ../cpython.patch; then
-        echo "Warning: Patch may have failed or already applied"
-    fi
-fi
+apt -y install python3 python3-dev python3-pip
 
-# ИСПРАВЛЕНИЕ: Установка Cython 0.29.37[citation:3]
-echo "Installing Cython 0.29.37..."
-pip3 install Cython==0.29.37 --no-binary :all:
+apt-get -y install p7zip-full libsdl2-dev libsdl2-image-dev libjpeg-dev libpng-dev libsdl2-ttf-dev libsdl2-mixer-dev libavformat-dev libfreetype6-dev libswscale-dev libglew-dev libfribidi-dev libavcodec-dev  libswresample-dev libsdl2-gfx-dev libgl1-mesa-glx
+pip3 uninstall distribute
+pip3 install future six typing requests ecdsa pefile Cython==3.0.12 setuptools
 
-echo "=== Setup completed successfully ==="
+python3 --version
+
+apt -y install build-essential checkinstall
+
+git clone --branch v3.9.22 --single-branch https://github.com/python/cpython.git
+
+pushd cpython
+patch -p1 < ../cpython.patch
+popd
+
+/bin/bash -c 'sed -i'"'"'.bak'"'"' '"'"'s/set(CMAKE_EXE_LINKER_FLAGS_INIT "/set(CMAKE_EXE_LINKER_FLAGS_INIT "-fPIC /'"'"' $DEVKITPRO/cmake/Switch.cmake'
