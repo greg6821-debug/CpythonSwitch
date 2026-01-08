@@ -12,7 +12,7 @@ PATCH_FILE=$(pwd)/../cpython.patch
 
 cd "$CPYTHON_DIR"
 
-# применяем патч
+# 1. Применяем патч
 if [ -f "$PATCH_FILE" ]; then
     echo "[*] Applying patch $PATCH_FILE"
     patch -p1 < "$PATCH_FILE"
@@ -38,7 +38,7 @@ export ac_cv_func_mmap=no
 export ac_cv_func_sigaction=no
 export ac_cv_have_long_long=yes
 
-# Запуск configure
+# 3. Конфигурируем
 ./configure \
   --host=aarch64-none-elf \
   --build=x86_64-linux-gnu \
@@ -47,7 +47,7 @@ export ac_cv_have_long_long=yes
   --enable-ipv6=no \
   --prefix=/python
 
-# Сборка
+# 4. Собираем
 make -j$(nproc)
 
 echo "[*] Build finished successfully"
