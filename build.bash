@@ -9,7 +9,6 @@ echo "[*] Building CPython for aarch64-none-elf"
 
 CPYTHON_DIR=$(pwd)/cpython
 PATCH_FILE=$(pwd)/../cpython.patch
-CONFIG_SITE_FILE=$(pwd)/../cpython_config_files/config.site
 SETUP_LOCAL_FILE=$(pwd)/../cpython_config_files/Setup.local
 
 cd "$CPYTHON_DIR"
@@ -20,11 +19,17 @@ if [ -f "$PATCH_FILE" ]; then
     patch -p1 < "$PATCH_FILE"
 fi
 
-# !!! Абсолютный путь обязателен !!!
-export CONFIG_SITE=$(realpath "$CONFIG_SITE_FILE")
-
 # Setup.local
 export PYTHON_SETUP_LOCAL=$(realpath "$SETUP_LOCAL_FILE")
+
+# Экспорт переменных для кросс-компиляции прямо в окружении
+export ac_cv_file__dev_ptmx=yes
+export ac_cv_file__dev_null=yes
+export ac_cv_file__dev_zero=yes
+export ac_cv_file__dev_random=yes
+export ac_cv_func_getentropy=no
+export ac_cv_func_getrandom=no
+export ac_cv_func_getpagesize=yes
 
 # Запуск configure
 ./configure \
@@ -37,3 +42,5 @@ export PYTHON_SETUP_LOCAL=$(realpath "$SETUP_LOCAL_FILE")
 
 # Сборка
 make -j$(nproc)
+
+echo "[*] Build finished successfully"
