@@ -1,111 +1,39 @@
 #!/bin/bash
-
 set -e
 
-echo "Setting up CPython 3.9 build environment for Switch..."
+echo "=== Setting up Python 3.9 build environment ==="
 
-# Устанавливаем системные зависимости
-echo "Installing system dependencies..."
+# Установка системных зависимостей[citation:1]
 sudo apt-get update
 sudo apt-get install -y \
     build-essential \
-    git \
-    autoconf \
-    automake \
-    libtool \
-    pkg-config \
+    zlib1g-dev \
     libffi-dev \
     libssl-dev \
-    zlib1g-dev \
     libbz2-dev \
     libreadline-dev \
     libsqlite3-dev \
-    libncurses5-dev \
     liblzma-dev \
-    libgdbm-dev \
-    libgdbm-compat-dev \
-    tk-dev \
-    python3 \
-    python3-pip \
-    python3-venv \
-    wget \
-    curl \
-    xz-utils \
-    unzip
+    pkg-config
 
-# Установка devkitpro
-echo "Setting up devkitpro..."
-if [ ! -d "/opt/devkitpro" ]; then
-    echo "Installing devkitpro from official installer..."
-    wget -q https://github.com/devkitPro/pacman/releases/download/v1.0.2/devkitpro-pacman.amd64.deb
-    sudo dpkg -i devkitpro-pacman.amd64.deb
-    sudo rm -f devkitpro-pacman.amd64.deb
-    
-    # Инициализируем пакетный менеджер
-    sudo dkp-pacman -Syu --noconfirm
-    sudo dkp-pacman -S --noconfirm \
-        switch-dev \
-        devkitA64 \
-        libnx \
-        switch-tools \
-        switch-pkg-config \
-        switch-examples
+# Скачивание и распаковка CPython
+if [ ! -d "CPython-3.9.22" ]; then
+    wget https://www.python.org/ftp/python/3.9.22/Python-3.9.22.tar.xz
+    tar -xf Python-3.9.22.tar.xz
+    mv Python-3.9.22 CPython-3.9.22
 fi
 
-# Создаем виртуальное окружение для Python инструментов
-echo "Setting up Python virtual environment..."
-python3 -m venv switch-build-venv
-source switch-build-venv/bin/activate
-
-# Устанавливаем необходимые Python пакеты
-echo "Installing Python build dependencies..."
-pip install --upgrade pip setuptools wheel
-pip install Cython==0.29.37
-pip install distribute future six
-
-# Клонируем CPython если нет
-if [ ! -d "cpython" ]; then
-    echo "Cloning CPython repository..."
-    git clone --branch v3.9.22 --depth 1 https://github.com/python/cpython.git
-fi
-
-# Применяем патчи если есть
-if [ -f "cpython.patch" ]; then
-    echo "Checking cpython.patch..."
-    cd cpython
-    if patch --dry-run -p1 < ../cpython.patch 2>/dev/null; then
-        echo "Applying cpython.patch..."
-        patch -p1 < ../cpython.patch
-        echo "Patch applied successfully"
-    else
-        echo "Patch may have already been applied or has conflicts"
+# Применение патча с проверкой
+cd CPython-3.9.22
+if [ -f "../cpython.patch" ]; then
+    echo "Applying cpython.patch..."
+    if ! patch -p1 -N < ../cpython.patch; then
+        echo "Warning: Patch may have failed or already applied"
     fi
-    cd ..
 fi
 
-# Настраиваем переменные окружения
-echo "Setting up environment variables..."
-export DEVKITPRO="/opt/devkitpro"
-export DEVKITA64="$DEVKITPRO/devkitA64"
-export PATH="$DEVKITA64/bin:$DEVKITPRO/tools/bin:$PATH"
+# ИСПРАВЛЕНИЕ: Установка Cython 0.29.37[citation:3]
+echo "Installing Cython 0.29.37..."
+pip3 install Cython==0.29.37 --no-binary :all:
 
-# Проверяем инструменты
-echo "Checking toolchain..."
-which aarch64-none-elf-gcc || echo "WARNING: aarch64-none-elf-gcc not found"
-which pkg-config || echo "WARNING: pkg-config not found"
-
-echo "========================================"
-echo "Setup completed successfully!"
-echo "Environment variables:"
-echo "  DEVKITPRO: $DEVKITPRO"
-echo "  DEVKITA64: $DEVKITA64"
-echo ""
-echo "To activate Python environment:"
-echo "  source switch-build-venv/bin/activate"
-echo ""
-echo "To build CPython:"
-echo "  ./build.bash"
-echo ""
-echo "To build Switch application:"
-echo "  cd switch && make"
-echo "========================================"
+echo "=== Setup completed successfully ==="
