@@ -4,58 +4,117 @@ run-name: ${{ github.actor }} is building CPython for Switch 🚀
 
 on:
   push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
   workflow_dispatch:
 
 jobs:
-  build-artifact:
-    name: Build
+  build:
     runs-on: ubuntu-latest
-    container: devkitpro/devkita64:20241023
-
+    
     steps:
-      - name: List DEVKITPRO directory
-        run: |
-          echo "DEVKITPRO path: $DEVKITPRO"
-          if [ -d "$DEVKITPRO" ]; then
-            echo "DEVKITPRO exists"
-            ls -la "$DEVKITPRO"
-            echo "devkitA64 directory:"
-            ls -la "$DEVKITPRO/devkitA64/" || true
-          else
-            echo "DEVKITPRO directory not found!"
-          fi
-
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          
-
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Cache CPython source
+      uses: actions/cache@v3
+      with:
+        path: cpython
+        key: ${{ runner.os }}-cpython-3.9.22-${{ hashFiles('setup.bash') }}
+        restore-keys: |
+          ${{ runner.os }}-cpython-3.9.22-
+    
+    - name: Set up devkitPro
+      run: |
+        export DEVKITPRO=/opt/devkitpro
+        echo "DEVKITPRO=$DEVKITPRO" >> $GITHUB_ENV
         
-      - name: Setup CPython for Switch
-        run: bash setup.bash
-
-      - name: Build CPython for Switch
-        run: bash build.bash
+        # Установка devkitPro
+        sudo mkdir -p $DEVKITPRO
+        sudo chown -R $USER:$USER $DEVKITPRO
         
-      - name: Upload python39-switch artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: python39-switch
-          path: python39-switch
-          
-      - name: Check libnx
-        run: ls -la $DEVKITPRO/libnx/lib
-
-      - name: Build test Python NRO (debug)
-        run: |
-          cd switch
-          make all V=1 --debug=v
-
-      - name: Upload test_python.nro
-        uses: actions/upload-artifact@v4
-        with:
-          name: test_python_nro
-          path: switch/test_python.nro
-
-
+        wget -q https://github.com/devkitPro/pacman/releases/latest/download/devkitpro-pacman.deb
+        sudo dpkg -i devkitpro-pacman.deb
+        
+        # Установка необходимых пакетов
+        sudo dkp-pacman -Syu --noconfirm \
+          switch-dev \
+          switch-portlibs \
+          devkitA64 \
+          aarch64-none-elf-binutils \
+          aarch64-none-elf-gcc \
+          aarch64-none-elf-newlib
+        
+        echo "/opt/devkitpro/portlibs/switch/lib" >> /etc/ld.so.conf
+        sudo ldconfig
+        
+    - name: Set up build environment
+      run: |
+        chmod +x setup.bash
+        ./setup.bash
+        
+    - name: Build CPython
+      run: |
+        chmod +x build.bash
+        ./build.bash
+        
+    - name: Build NRO application
+      run: |
+        cd switch
+        make -j$(nproc)
+        
+    - name: Create deployment package
+      run: |
+        mkdir -p dist
+        mkdir -p dist/switch
+        mkdir -p dist/sdmc
+        
+        # Копируем NRO
+        cp switch/build/python_switch.nro dist/switch/
+        
+        # Копируем структуру Python для SD-карты
+        cp -r sdmc/* dist/sdmc/
+        
+        # Создаем README
+        cat > dist/README.txt << 'EOF'
+        === Python 3.9 for Nintendo Switch ===
+        
+        Installation:
+        1. Copy everything from 'sdmc/' folder to the root of your SD card
+        2. Copy 'python_switch.nro' to /switch/ folder on your SD card
+        3. Run from Homebrew Menu
+        
+        Structure on SD card:
+        /sdmc/python/           - Python installation
+        /sdmc/python/main.py    - Main script (can be modified)
+        /switch/python_switch.nro - Python launcher
+        
+        To run your own scripts:
+        1. Edit or replace sdmc:/python/main.py
+        2. Or create new scripts in sdmc:/python/
+        3. Import them from main.py
+        
+        Tested on: Atmosphere CFW, Firmware 16.0.0+
+        EOF
+        
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: python-switch-build
+        path: |
+          dist/
+          python39-switch/
+        retention-days: 7
+        
+    - name: Create release archive
+      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+      run: |
+        cd dist
+        zip -r ../python-switch-release.zip .
+        
+    - name: Upload release
+      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: python-switch-release.zip
