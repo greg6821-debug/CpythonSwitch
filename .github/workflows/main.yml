@@ -9,42 +9,44 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
+env:
+  DEVKITPRO: /opt/devkitpro
+  DEVKITA64: /opt/devkitpro/devkitA64
+
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
       with:
-        submodules: 'recursive'
+        submodules: recursive
     
-    - name: Cache CPython sources
+    - name: Cache devkitpro
       uses: actions/cache@v4
       with:
-        path: |
-          cpython
-          venv
-        key: ${{ runner.os }}-cpython-${{ hashFiles('setup.bash', 'cpython.patch') }}
+        path: /opt/devkitpro
+        key: ${{ runner.os }}-devkitpro-${{ hashFiles('setup.bash') }}
     
-    - name: Set up devkitPro
-      run: |
-        # Скачиваем и запускаем официальный установщик
-        wget https://github.com/devkitPro/installer/releases/latest/download/devkitpro-pacman-installer.pkg.tar.xz
-        sudo tar -xJf devkitpro-pacman-installer.pkg.tar.xz -C /
-        
-        # Инициализируем pacman и устанавливаем пакеты для Switch
-        sudo dkp-pacman -Syu
-        sudo dkp-pacman -S switch-dev devkitA64 libnx general-tools
-        
-        # Устанавливаем переменные окружения для последующих шагов
-        echo "DEVKITPRO=/opt/devkitpro" >> $GITHUB_ENV
-        echo "DEVKITA64=/opt/devkitpro/devkitA64" >> $GITHUB_ENV
-        echo "PATH=$DEVKITA64/bin:$PATH" >> $GITHUB_ENV
+    - name: Cache CPython source
+      uses: actions/cache@v4
+      with:
+        path: cpython
+        key: ${{ runner.os }}-cpython-${{ hashFiles('setup.bash') }}
     
-    - name: Setup build environment
+    - name: Cache Python build
+      uses: actions/cache@v4
+      with:
+        path: python39-switch
+        key: ${{ runner.os }}-python-build-${{ hashFiles('build.bash', 'setup.bash') }}
+    
+    - name: Set up environment
       run: |
         chmod +x setup.bash
         ./setup.bash
+        echo "${{ env.DEVKITA64 }}/bin" >> $GITHUB_PATH
+        echo "${{ env.DEVKITPRO }}/tools/bin" >> $GITHUB_PATH
     
     - name: Build CPython for Switch
       run: |
@@ -55,24 +57,50 @@ jobs:
       run: |
         cd switch
         make
+        ls -la *.nro
     
-    - name: Verify build artifacts
+    - name: Create SD card structure info
       run: |
-        echo "Checking build artifacts..."
-        ls -la python39-switch/sd_layout/python/lib/
-        if [ -f switch/python_switch.nro ]; then
-          echo "✓ NRO file built successfully"
-          file switch/python_switch.nro
-        else
-          echo "✗ NRO file not found!"
-          exit 1
-        fi
+        echo "SD card structure:" > sd_structure.txt
+        echo "sdmc:/" >> sd_structure.txt
+        echo "├── python/" >> sd_structure.txt
+        echo "│   ├── bin/" >> sd_structure.txt
+        echo "│   ├── lib/" >> sd_structure.txt
+        echo "│   ├── include/" >> sd_structure.txt
+        echo "│   └── share/" >> sd_structure.txt
+        echo "└── switch/" >> sd_structure.txt
+        echo "    └── python_switch.nro" >> sd_structure.txt
+        echo "" >> sd_structure.txt
+        echo "Copy these files to SD card:" >> sd_structure.txt
+        echo "1. Copy entire python39-switch/ to sdmc:/python/" >> sd_structure.txt
+        echo "2. Copy switch/python_switch.nro to sdmc:/switch/" >> sd_structure.txt
     
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
         name: python-switch-build
         path: |
-          python39-switch/sd_layout/
+          python39-switch/
           switch/python_switch.nro
+          switch/python_switch.elf
+          sd_structure.txt
         retention-days: 7
+    
+    - name: Create release package
+      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+      run: |
+        mkdir -p release
+        cp -r python39-switch release/
+        cp switch/python_switch.nro release/
+        cp sd_structure.txt release/
+        cd release
+        tar czf python-switch-$(date +%Y%m%d).tar.gz *
+        cd ..
+    
+    - name: Upload release package
+      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+      uses: actions/upload-artifact@v4
+      with:
+        name: python-switch-release
+        path: release/python-switch-*.tar.gz
+        retention-days: 30
