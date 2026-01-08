@@ -9,98 +9,65 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
-env:
-  DEVKITPRO: /opt/devkitpro
-  DEVKITA64: /opt/devkitpro/devkitA64
-
 jobs:
   build:
-    runs-on: ubuntu-22.04
-    
+    runs-on: ubuntu-24.04
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      with:
-        submodules: recursive
-    
-    - name: Cache devkitpro
+
+    - name: Cache devkitPro
       uses: actions/cache@v4
       with:
         path: /opt/devkitpro
-        key: ${{ runner.os }}-devkitpro-${{ hashFiles('setup.bash') }}
-    
-    - name: Cache CPython source
-      uses: actions/cache@v4
-      with:
-        path: cpython
-        key: ${{ runner.os }}-cpython-${{ hashFiles('setup.bash') }}
-    
-    - name: Cache Python build
-      uses: actions/cache@v4
-      with:
-        path: python39-switch
-        key: ${{ runner.os }}-python-build-${{ hashFiles('build.bash', 'setup.bash') }}
-    
-    - name: Set up environment
+        key: ${{ runner.os }}-devkitpro
+
+    - name: Install devkitPro and dependencies
       run: |
-        chmod +x setup.bash
-        ./setup.bash
-        echo "${{ env.DEVKITA64 }}/bin" >> $GITHUB_PATH
-        echo "${{ env.DEVKITPRO }}/tools/bin" >> $GITHUB_PATH
-    
+        # Установка devkitPro через официальный apt-репозиторий[citation:1]
+        sudo apt-get update
+        sudo apt-get install -y wget
+        wget https://apt.devkitpro.org/install-devkitpro-pacman
+        chmod +x ./install-devkitpro-pacman
+        sudo ./install-devkitpro-pacman
+        # Установка базовых пакетов для Switch[citation:1]
+        sudo dkp-pacman -Sy --noconfirm --needed devkitA64 libnx switch-tools switch-pkg-config
+        # Загрузка и установка указанных пакетов
+        sudo dkp-pacman -U --noconfirm \
+          ./devkitpro-pkgbuild-helpers-2.2.3-1-any.pkg.tar.xz \
+          ./switch-libfribidi-1.0.12-1-any.pkg.tar.xz
+
+    - name: Install Python dependencies
+      run: |
+        pip3 install Cython==0.29.37[citation:3]
+
+    - name: Setup environment
+      run: |
+        echo "DEVKITPRO=/opt/devkitpro" >> $GITHUB_ENV
+        echo "DEVKITARM=/opt/devkitpro/devkitARM" >> $GITHUB_ENV
+        echo "DEVKITPPC=/opt/devkitpro/devkitPPC" >> $GITHUB_ENV
+        echo "PATH=/opt/devkitpro/tools/bin:$PATH" >> $GITHUB_ENV
+        # Экспорт переменных для текущего шага[citation:1]
+        export DEVKITPRO=/opt/devkitpro
+        export DEVKITA64=/opt/devkitpro/devkitA64
+        export PATH=$DEVKITPRO/tools/bin:$PATH
+
     - name: Build CPython for Switch
       run: |
-        chmod +x build.bash
+        chmod +x ./setup.bash
+        chmod +x ./build.bash
+        ./setup.bash
         ./build.bash
-    
-    - name: Build Switch NRO
+
+    - name: Build NRO Application
       run: |
         cd switch
         make
-        ls -la *.nro
-    
-    - name: Create SD card structure info
-      run: |
-        echo "SD card structure:" > sd_structure.txt
-        echo "sdmc:/" >> sd_structure.txt
-        echo "├── python/" >> sd_structure.txt
-        echo "│   ├── bin/" >> sd_structure.txt
-        echo "│   ├── lib/" >> sd_structure.txt
-        echo "│   ├── include/" >> sd_structure.txt
-        echo "│   └── share/" >> sd_structure.txt
-        echo "└── switch/" >> sd_structure.txt
-        echo "    └── python_switch.nro" >> sd_structure.txt
-        echo "" >> sd_structure.txt
-        echo "Copy these files to SD card:" >> sd_structure.txt
-        echo "1. Copy entire python39-switch/ to sdmc:/python/" >> sd_structure.txt
-        echo "2. Copy switch/python_switch.nro to sdmc:/switch/" >> sd_structure.txt
-    
+
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: python-switch-build
+        name: switch-build
         path: |
           python39-switch/
-          switch/python_switch.nro
-          switch/python_switch.elf
-          sd_structure.txt
-        retention-days: 7
-    
-    - name: Create release package
-      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
-      run: |
-        mkdir -p release
-        cp -r python39-switch release/
-        cp switch/python_switch.nro release/
-        cp sd_structure.txt release/
-        cd release
-        tar czf python-switch-$(date +%Y%m%d).tar.gz *
-        cd ..
-    
-    - name: Upload release package
-      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
-      uses: actions/upload-artifact@v4
-      with:
-        name: python-switch-release
-        path: release/python-switch-*.tar.gz
-        retention-days: 30
+          switch/*.nro
