@@ -23,13 +23,21 @@ fi
 export PYTHON_SETUP_LOCAL=$(realpath "$SETUP_LOCAL_FILE")
 
 # Экспорт переменных для кросс-компиляции прямо в окружении
-export ac_cv_file__dev_ptmx=yes
-export ac_cv_file__dev_null=yes
-export ac_cv_file__dev_zero=yes
-export ac_cv_file__dev_random=yes
-export ac_cv_func_getentropy=no
-export ac_cv_func_getrandom=no
-export ac_cv_func_getpagesize=yes
+export ac_cv_file__dev_ptmx=no
+export ac_cv_file__dev_ptc=no
+export ac_cv_lib_dl_dlopen=no
+
+export ac_cv_func_statvfs=no
+export ac_cv_header_sys_resource_h=no
+export ac_cv_func_fork=no
+export ac_cv_func_execve=no
+export ac_cv_func_waitpid=no
+export ac_cv_func_pipe=no
+export ac_cv_func_kill=no
+
+export ac_cv_func_mmap=no
+export ac_cv_func_sigaction=no
+export ac_cv_have_long_long=yes
 
 # Запуск configure
 ./configure \
