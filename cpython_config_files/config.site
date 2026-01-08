@@ -9,3 +9,8 @@ ac_cv_func_execve=no
 ac_cv_func_waitpid=no
 ac_cv_func_pipe=no
 ac_cv_func_kill=no
+
+ac_cv_func_mmap=no
+ac_cv_func_sigaction=no
+ac_cv_have_long_long=yes
+
