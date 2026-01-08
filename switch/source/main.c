@@ -6,7 +6,14 @@ int main(int argc, char* argv[])
     consoleInit(NULL);
 
     Py_SetProgramName(L"python");
-    Py_Initialize();
+    // Добавить проверку инициализации
+    if (!Py_Initialize()) {
+        printf("Failed to initialize Python.\n");
+        return 1;
+    }
+    // Указать домашний каталог (например, на SD‑карте)
+    Py_SetPythonHome(L"sdmc:/python");
+
 
     PyRun_SimpleString(
         "import sys\n"
