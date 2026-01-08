@@ -1,58 +1,72 @@
-# ============================
-# Project configuration
-# ============================
-TARGET := test_python
-BUILD := build
-SOURCES := source/main.c
-PLATFORM := switch
+#-------------------------------------------------------------------------------
+# Настройки проекта
+#-------------------------------------------------------------------------------
+TARGET   := python_switch
+BUILD    := build
+SOURCES  := source
+INCLUDES := include
+PYTHON_LIB := $(abspath ../python39-switch/lib/libpython3.9.a)
+PYTHON_INC := $(abspath ../python39-switch/include/python3.9)
 
-# ============================
-# Environment checks
-# ============================
-ifndef DEVKITPRO
-$(error DEVKITPRO is not set. Please set it to your devkitPro installation path)
-endif
+#-------------------------------------------------------------------------------
+# Библиотеки
+#-------------------------------------------------------------------------------
+LIBS    := -lpython3.9 -lm -lz $(PYTHON_LIB)
 
-# ============================
-# Custom flags
-# ============================
-CFLAGS += -I../python39-switch/include/python3.9
-# Линкуем только уже собранный Python для Switch
-LIBS += ../python39-switch/lib/libpython3.9.a
+#-------------------------------------------------------------------------------
+# Флаги компилятора
+#-------------------------------------------------------------------------------
+ARCH     := -march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE
+CFLAGS   := -g -Wall -O2 -ffunction-sections $(ARCH) -D__SWITCH__ -I$(PYTHON_INC)
+CFLAGS   += -I$(DEVKITPRO)/libnx/include -I$(PORTLIBS)/include
 
-# ============================
-# Debug output
-# ============================
-$(info ===== DEBUG =====)
-$(info DEVKITPRO=$(DEVKITPRO))
-$(info PLATFORM=$(PLATFORM))
-$(info CC=$(CC))
-$(info CFLAGS=$(CFLAGS))
-$(info LIBS=$(LIBS))
-$(info =================)
+#-------------------------------------------------------------------------------
+# Флаги линковщика
+#-------------------------------------------------------------------------------
+LDFLAGS  := -specs=$(DEVKITPRO)/libnx/switch.specs $(ARCH)
+LDFLAGS  += -L$(DEVKITPRO)/libnx/lib -L$(PORTLIBS)/lib
 
-# ============================
-# Отладка: вывод содержимого DEVKITPRO
-# ============================
-.PHONY: list-devkitpro
-list-devkitpro:
-	@echo "===== Listing DEVKITPRO folder ====="
-	@find $(DEVKITPRO) -type d -exec echo "Directory: {}" \;
-	@find $(DEVKITPRO) -type f -exec echo "File: {}" \;
-	@echo "===== End of DEVKITPRO listing ====="
-
-# ============================
-# Include devkitPro rules
-# ============================
+#-------------------------------------------------------------------------------
+# Правила сборки (devkitPro)
+#-------------------------------------------------------------------------------
 include $(DEVKITPRO)/libnx/switch_rules
 
-# ============================
-# Targets
-# ============================
-all: $(TARGET).nro
+#-------------------------------------------------------------------------------
+# Исходные файлы
+#-------------------------------------------------------------------------------
+CFILES   := $(wildcard $(SOURCES)/*.c)
+OFILES   := $(addprefix $(BUILD)/, $(notdir $(CFILES:.c=.o)))
 
-# ============================
-# Clean
-# ============================
-#clean:
-	#rm -rf $(BUILD) *.nro *.elf *.bin
+#-------------------------------------------------------------------------------
+# Основные цели
+#-------------------------------------------------------------------------------
+$(BUILD)/$(TARGET).nro: $(BUILD)/$(TARGET).elf
+$(BUILD)/$(TARGET).elf: $(OFILES)
+
+#-------------------------------------------------------------------------------
+# Специфичные правила для каждого исходного файла
+#-------------------------------------------------------------------------------
+$(BUILD)/main.o: $(SOURCES)/main.c
+	@mkdir -p $(BUILD)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+#-------------------------------------------------------------------------------
+# Очистка
+#-------------------------------------------------------------------------------
+clean:
+	@echo Cleaning...
+	@rm -fr $(BUILD) $(TARGET).nro $(TARGET).elf
+
+#-------------------------------------------------------------------------------
+# Сборка
+#-------------------------------------------------------------------------------
+all: $(BUILD)/$(TARGET).nro
+	@echo Built: $(TARGET).nro
+
+#-------------------------------------------------------------------------------
+# Установка на SD-карту (пример, требует настройки пути)
+#-------------------------------------------------------------------------------
+install:
+	@echo "Copying $(TARGET).nro to SD card..."
+	@cp $(BUILD)/$(TARGET).nro /path/to/your/sd/switch/
+	@echo "Don't forget to copy python39-switch directory to sdmc:/python/"
