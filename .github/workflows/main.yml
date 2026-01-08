@@ -17,21 +17,13 @@ jobs:
         run: |
           echo "DEVKITPRO=$DEVKITPRO"
           echo "DEVKITA64=$DEVKITA64"
+          which aarch64-none-elf-gcc
+          which elf2nro
 
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           submodules: recursive
-
-      - name: Install dependencies
-        run: |
-          pacman -Sy --noconfirm \
-            make \
-            patch \
-            autoconf \
-            automake \
-            libtool \
-            pkg-config
 
       - name: Setup CPython for Switch
         run: |
