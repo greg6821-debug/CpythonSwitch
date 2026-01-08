@@ -3,7 +3,6 @@ name: Build CPython 3.9 for Nintendo Switch
 run-name: ${{ github.actor }} is building CPython for Switch 🚀
 
 on:
-  push:
   workflow_dispatch:
 
 jobs:
