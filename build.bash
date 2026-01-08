@@ -9,7 +9,6 @@ echo "[*] Building CPython for aarch64-none-elf"
 
 CPYTHON_DIR=$(pwd)/cpython
 PATCH_FILE=$(pwd)/../cpython.patch
-SETUP_LOCAL_FILE=$(pwd)/../cpython_config_files/Setup.local
 
 cd "$CPYTHON_DIR"
 
@@ -20,7 +19,7 @@ if [ -f "$PATCH_FILE" ]; then
 fi
 
 # Setup.local
-export PYTHON_SETUP_LOCAL=$(realpath "$SETUP_LOCAL_FILE")
+export PYTHON_SETUP_LOCAL=$(pwd)/cpython_config_files/Setup.local
 
 # Экспорт переменных для кросс-компиляции прямо в окружении
 export ac_cv_file__dev_ptmx=no
