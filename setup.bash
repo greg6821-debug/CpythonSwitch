@@ -1,29 +1,69 @@
-set -e
+#!/bin/bash
 
-export DEVKITPRO=/opt/devkitpro
-export RENPY_VER=8.3.7
-export PYGAME_SDL2_VER=2.1.0
+set -e  # Выход при ошибке
 
-apt-get -y update
-apt-get -y upgrade
+echo "=== Setting up CPython 3.9 build environment ==="
 
-apt -y install build-essential checkinstall
-apt -y install libncursesw5-dev libssl-dev libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev
+# Настройка путей
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TOP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+CPYTHON_DIR="$TOP_DIR/cpython"
 
-apt -y install python3 python3-dev python3-pip
+# Проверка наличия devkitPro
+if [ -z "$DEVKITPRO" ]; then
+    echo "Error: DEVKITPRO environment variable not set!"
+    echo "Please install devkitPro first: https://devkitpro.org"
+    exit 1
+fi
 
-apt-get -y install p7zip-full libsdl2-dev libsdl2-image-dev libjpeg-dev libpng-dev libsdl2-ttf-dev libsdl2-mixer-dev libavformat-dev libfreetype6-dev libswscale-dev libglew-dev libfribidi-dev libavcodec-dev  libswresample-dev libsdl2-gfx-dev libgl1-mesa-glx
-pip3 uninstall distribute
-pip3 install future six typing requests ecdsa pefile Cython==3.0.12 setuptools
+export PATH="$DEVKITPRO/devkitA64/bin:$PATH"
+export PATH="$DEVKITPRO/tools/bin:$PATH"
 
-python3 --version
+# Установка необходимых пакетов
+echo "Installing required packages..."
+sudo dkp-pacman -Syu --noconfirm \
+    switch-dev \
+    switch-portlibs \
+    devkitA64 \
+    aarch64-none-elf-binutils \
+    aarch64-none-elf-gcc \
+    aarch64-none-elf-newlib \
+    python3
 
-apt -y install build-essential checkinstall
+# Клонирование CPython 3.9, если еще не существует
+if [ ! -d "$CPYTHON_DIR" ]; then
+    echo "Cloning CPython 3.9.22..."
+    git clone --depth 1 --branch v3.9.22 https://github.com/python/cpython.git "$CPYTHON_DIR"
+else
+    echo "CPython directory already exists, updating..."
+    cd "$CPYTHON_DIR"
+    git fetch origin v3.9.22
+    git checkout v3.9.22
+fi
 
-git clone --branch v3.9.22 --single-branch https://github.com/python/cpython.git
+# Применение патчей, если есть
+cd "$CPYTHON_DIR"
 
-pushd cpython
-patch -p1 < ../cpython.patch
-popd
+if [ -f "$TOP_DIR/cpython.patch" ]; then
+    echo "Applying cpython.patch..."
+    if ! patch -p1 < "$TOP_DIR/cpython.patch"; then
+        echo "Warning: Failed to apply cpython.patch"
+        echo "Continuing without patch..."
+    fi
+fi
 
-/bin/bash -c 'sed -i'"'"'.bak'"'"' '"'"'s/set(CMAKE_EXE_LINKER_FLAGS_INIT "/set(CMAKE_EXE_LINKER_FLAGS_INIT "-fPIC /'"'"' $DEVKITPRO/cmake/Switch.cmake'
+# Настройка переменных окружения для кросс-компиляции
+export CC="aarch64-none-elf-gcc"
+export CXX="aarch64-none-elf-g++"
+export AR="aarch64-none-elf-ar"
+export RANLIB="aarch64-none-elf-ranlib"
+export STRIP="aarch64-none-elf-strip"
+
+export CFLAGS="-O2 -march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE -I$DEVKITPRO/libnx/include -I$DEVKITPRO/portlibs/switch/include -D__SWITCH__"
+export LDFLAGS="-specs=$DEVKITPRO/libnx/switch.specs -march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE -L$DEVKITPRO/libnx/lib -L$DEVKITPRO/portlibs/switch/lib"
+
+echo "=== Environment setup complete ==="
+echo "Next steps:"
+echo "1. Run ./build.bash to build CPython"
+echo "2. Navigate to switch/ directory and run 'make'"
+echo "3. Copy files to your Switch SD card"
