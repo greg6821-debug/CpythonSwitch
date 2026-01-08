@@ -27,7 +27,7 @@ jobs:
         # Установка devkitPro через официальный apt-репозиторий[citation:1]
         sudo apt-get update
         sudo apt-get install -y wget
-        wget https://apt.devkitpro.org/install-devkitpro-pacman
+        wget -U "Mozilla/5.0" -O install-devkitpro-pacman https://apt.devkitpro.org/install-devkitpro-pacman
         chmod +x ./install-devkitpro-pacman
         sudo ./install-devkitpro-pacman
         # Установка базовых пакетов для Switch[citation:1]
