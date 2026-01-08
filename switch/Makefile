@@ -62,11 +62,3 @@ clean:
 #-------------------------------------------------------------------------------
 all: $(BUILD)/$(TARGET).nro
 	@echo Built: $(TARGET).nro
-
-#-------------------------------------------------------------------------------
-# Установка на SD-карту (пример, требует настройки пути)
-#-------------------------------------------------------------------------------
-install:
-	@echo "Copying $(TARGET).nro to SD card..."
-	@cp $(BUILD)/$(TARGET).nro /path/to/your/sd/switch/
-	@echo "Don't forget to copy python39-switch directory to sdmc:/python/"
