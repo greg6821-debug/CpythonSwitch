@@ -1,7 +1,5 @@
 name: Build CPython 3.9 for Nintendo Switch
 
-run-name: ${{ github.actor }} builds CPython 3.9 (.nro) 🚀
-
 on:
   workflow_dispatch:
 
@@ -13,39 +11,34 @@ jobs:
       image: devkitpro/devkita64:20241023
 
     steps:
-      - name: Show DEVKITPRO paths
-        run: |
-          echo "DEVKITPRO=$DEVKITPRO"
-          echo "DEVKITA64=$DEVKITA64"
-          which aarch64-none-elf-gcc
-          which elf2nro
-
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
+      # 🔴 ВАЖНО: ДОЛЖНО БЫТЬ ПЕРВЫМ ПОСЛЕ CHECKOUT
       - name: Export devkitA64 env
         run: |
           echo "DEVKITA64=/opt/devkitpro/devkitA64" >> $GITHUB_ENV
           echo "PATH=/opt/devkitpro/devkitA64/bin:$PATH" >> $GITHUB_ENV
 
-      - name: Setup CPython for Switch
+      # 🔎 ПРОВЕРКА (ТЕПЕРЬ СРАБОТАЕТ)
+      - name: Toolchain sanity check
         run: |
-          chmod +x setup.bash
-          ./setup.bash
+          echo "DEVKITPRO=$DEVKITPRO"
+          echo "DEVKITA64=$DEVKITA64"
+          which aarch64-none-elf-gcc
+          which elf2nro
+          which nacptool
 
-      - name: Build CPython (libpython3.9.a)
-        run: |
-          chmod +x build.bash
-          ./build.bash
+      - name: Setup CPython
+        run: ./setup.bash
+
+      - name: Build CPython
+        run: ./build.bash
 
       - name: Build Switch .nro
-        run: |
-          chmod +x build_switch_app.sh
-          ./build_switch_app.sh
+        run: ./build_switch_app.sh
 
-      - name: Upload python39-switch artifact
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: python39-switch
