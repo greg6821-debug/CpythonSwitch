@@ -1,69 +1,26 @@
 #!/bin/bash
+set -e
 
-set -e  # Выход при ошибке
+echo "Installing dependencies..."
+sudo apt-get update
+sudo apt-get install -y build-essential git zip unzip
 
-echo "=== Setting up CPython 3.9 build environment ==="
+echo "Setting up Python environment..."
+python3 -m pip install --user virtualenv
+python3 -m venv venv
+source venv/bin/activate
 
-# Настройка путей
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TOP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-CPYTHON_DIR="$TOP_DIR/cpython"
+pip install distribute future six setuptools wheel
 
-# Проверка наличия devkitPro
-if [ -z "$DEVKITPRO" ]; then
-    echo "Error: DEVKITPRO environment variable not set!"
-    echo "Please install devkitPro first: https://devkitpro.org"
+echo "Cloning CPython 3.9..."
+git clone --depth 1 --branch v3.9.22 https://github.com/python/cpython.git
+
+echo "Applying patch..."
+if ! patch -p1 -d cpython < cpython.patch; then
+    echo "ERROR: Failed to apply cpython.patch"
+    echo "Make sure the patch file exists and is compatible with CPython 3.9.22"
     exit 1
 fi
 
-export PATH="$DEVKITPRO/devkitA64/bin:$PATH"
-export PATH="$DEVKITPRO/tools/bin:$PATH"
-
-# Установка необходимых пакетов
-echo "Installing required packages..."
-sudo dkp-pacman -Syu --noconfirm \
-    switch-dev \
-    switch-portlibs \
-    devkitA64 \
-    aarch64-none-elf-binutils \
-    aarch64-none-elf-gcc \
-    aarch64-none-elf-newlib \
-    python3
-
-# Клонирование CPython 3.9, если еще не существует
-if [ ! -d "$CPYTHON_DIR" ]; then
-    echo "Cloning CPython 3.9.22..."
-    git clone --depth 1 --branch v3.9.22 https://github.com/python/cpython.git "$CPYTHON_DIR"
-else
-    echo "CPython directory already exists, updating..."
-    cd "$CPYTHON_DIR"
-    git fetch origin v3.9.22
-    git checkout v3.9.22
-fi
-
-# Применение патчей, если есть
-cd "$CPYTHON_DIR"
-
-if [ -f "$TOP_DIR/cpython.patch" ]; then
-    echo "Applying cpython.patch..."
-    if ! patch -p1 < "$TOP_DIR/cpython.patch"; then
-        echo "Warning: Failed to apply cpython.patch"
-        echo "Continuing without patch..."
-    fi
-fi
-
-# Настройка переменных окружения для кросс-компиляции
-export CC="aarch64-none-elf-gcc"
-export CXX="aarch64-none-elf-g++"
-export AR="aarch64-none-elf-ar"
-export RANLIB="aarch64-none-elf-ranlib"
-export STRIP="aarch64-none-elf-strip"
-
-export CFLAGS="-O2 -march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE -I$DEVKITPRO/libnx/include -I$DEVKITPRO/portlibs/switch/include -D__SWITCH__"
-export LDFLAGS="-specs=$DEVKITPRO/libnx/switch.specs -march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE -L$DEVKITPRO/libnx/lib -L$DEVKITPRO/portlibs/switch/lib"
-
-echo "=== Environment setup complete ==="
-echo "Next steps:"
-echo "1. Run ./build.bash to build CPython"
-echo "2. Navigate to switch/ directory and run 'make'"
-echo "3. Copy files to your Switch SD card"
+echo "Setup complete!"
+echo "Run './build.bash' to build CPython for Switch"
