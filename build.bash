@@ -19,7 +19,7 @@ if [ -f "$PATCH_FILE" ]; then
 fi
 
 # Setup.local
-export PYTHON_SETUP_LOCAL=$(pwd)/cpython_config_files/Setup.local
+#export PYTHON_SETUP_LOCAL=$(pwd)/cpython_config_files/Setup.local
 
 # Экспорт переменных для кросс-компиляции прямо в окружении
 export ac_cv_file__dev_ptmx=no
