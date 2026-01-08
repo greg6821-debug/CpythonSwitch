@@ -30,13 +30,13 @@ jobs:
           which nacptool
 
       - name: Setup CPython
-        run: ./setup.bash
+        run: bash setup.bash
 
       - name: Build CPython
-        run: ./build.bash
+        run: bash build.bash
 
       - name: Build Switch .nro
-        run: ./build_switch_app.sh
+        run: bash build_switch_app.sh
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
