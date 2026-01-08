@@ -2,11 +2,16 @@
 .SUFFIXES:
 #---------------------------------------------------------------------------------
 
-ifeq ($(strip $(DEVKITARM)),)
-$(error "Please set DEVKITARM in your environment. export DEVKITARM=<path to>devkitARM")
+ifeq ($(strip $(DEVKITPRO)),)
+$(error "Please set DEVKITPRO in your environment. export DEVKITPRO=<path to>devkitpro")
 endif
 
-include $(DEVKITARM)/switch_rules
+ifeq ($(strip $(DEVKITA64)),)
+$(error "Please set DEVKITA64 in your environment. export DEVKITA64=<path to>devkitA64")
+endif
+
+TOPDIR ?= $(CURDIR)
+include $(DEVKITPRO)/libnx/switch_rules
 
 #---------------------------------------------------------------------------------
 # TARGET is the name of the output
@@ -14,12 +19,23 @@ include $(DEVKITARM)/switch_rules
 # SOURCES is a list of directories containing source code
 # DATA is a list of directories containing data files
 # INCLUDES is a list of directories containing header files
+# ROMFS is the directory containing data to be added to RomFS
 #---------------------------------------------------------------------------------
 TARGET		:=	python_switch
 BUILD		:=	build
 SOURCES		:=	source
 DATA		:=	data
 INCLUDES	:=	include
+
+# Path to Python installation (relative or absolute)
+PYTHON_INSTALL	:=	../python39-switch
+PYTHON_INCLUDE	:=	$(PYTHON_INSTALL)/include/python3.9
+PYTHON_LIB		:=	$(PYTHON_INSTALL)/lib/libpython3.9.a
+
+# Check if Python library exists
+ifeq ($(wildcard $(PYTHON_LIB)),)
+$(error "Python library not found at $(PYTHON_LIB). Build Python first!")
+endif
 
 #---------------------------------------------------------------------------------
 # options for code generation
@@ -29,28 +45,20 @@ ARCH	:=	-march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE
 CFLAGS	:=	-g -Wall -O2 -ffunction-sections \
 			$(ARCH) $(DEFINES)
 
-CFLAGS	+=	$(INCLUDE) -D__SWITCH__
+CFLAGS	+=	$(INCLUDE) -D__SWITCH__ -I$(PYTHON_INCLUDE)
 
-CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions
+CXXFLAGS	:=	$(CFLAGS) -fno-rtti -fno-exceptions
 
 ASFLAGS	:=	-g $(ARCH)
 LDFLAGS	=	-specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
 
-# Используем абсолютный путь к библиотеке Python
-PYTHON_LIB_PATH := $(abspath ../python39-switch/lib/libpython3.9.a)
-LIBS	:= $(PYTHON_LIB_PATH) -lnx -lm
-
-# Проверяем наличие библиотеки Python
-ifeq ($(wildcard $(PYTHON_LIB_PATH)),)
-$(error "Python library not found at $(PYTHON_LIB_PATH). Run build.bash first.")
-endif
+LIBS	:=	-lnx $(PYTHON_LIB) -lstdc++ -lm -lz
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
 # include and lib
 #---------------------------------------------------------------------------------
-LIBDIRS	:= $(PORTLIBS) $(LIBNX)
-
+LIBDIRS	:=	$(PORTLIBS) $(LIBNX) $(PYTHON_INSTALL)/lib
 
 #---------------------------------------------------------------------------------
 # no real need to edit anything past this point unless you need to add additional
@@ -63,7 +71,7 @@ export OUTPUT	:=	$(CURDIR)/$(TARGET)
 export TOPDIR	:=	$(CURDIR)
 
 export VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir)) \
-			$(foreach dir,$(DATA),$(CURDIR)/$(dir))
+					$(foreach dir,$(DATA),$(CURDIR)/$(dir))
 
 export DEPSDIR	:=	$(CURDIR)/$(BUILD)
 
@@ -87,14 +95,14 @@ endif
 #---------------------------------------------------------------------------------
 
 export OFILES_BIN	:=	$(addsuffix .o,$(BINFILES))
-export OFILES_SRC	:=	$(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s:.o))
-export OFILES 	:=	$(OFILES_SRC) $(OFILES_BIN)
+export OFILES_SRC	:=	$(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
+export OFILES 	:=	$(OFILES_BIN) $(OFILES_SRC)
 export HFILES_BIN	:=	$(addsuffix .h,$(subst .,_,$(BINFILES)))
 
 export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
-			$(foreach dir,$(LIBDIRS),-I$(dir)/include) \
-			-I$(CURDIR)/$(BUILD) \
-			-I$(abspath ../python39-switch/include/python3.9)
+					-I$(PYTHON_INCLUDE) \
+					$(foreach dir,$(LIBDIRS),-I$(dir)/include) \
+					-I$(CURDIR)/$(BUILD)
 
 export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 
@@ -110,7 +118,7 @@ $(BUILD):
 #---------------------------------------------------------------------------------
 clean:
 	@echo clean ...
-	@rm -fr $(BUILD) $(TARGET).nro $(TARGET).npdm $(TARGET).elf
+	@rm -fr $(BUILD) $(TARGET).nro $(TARGET).nacp $(TARGET).elf
 
 #---------------------------------------------------------------------------------
 else
@@ -123,19 +131,21 @@ DEPENDS	:=	$(OFILES:.o=.d)
 #---------------------------------------------------------------------------------
 all	:	$(OUTPUT).nro
 
-$(OUTPUT).nro	:	$(OUTPUT).elf $(OUTPUT).npdm
+$(OUTPUT).nro	:	$(OUTPUT).elf $(OUTPUT).nacp
 
 $(OUTPUT).elf	:	$(OFILES)
 
-$(OFILES_SRC)	: $(HFILES_BIN)
+$(OUTPUT).nacp	:	$(OFILES)
+
+-include $(DEPENDS)
 
 #---------------------------------------------------------------------------------
-%.bin.o	:	%.bin
+# you need a rule like this for each extension you use as binary data
+#---------------------------------------------------------------------------------
+%.bin.o	%_bin.h :	%.bin
 #---------------------------------------------------------------------------------
 	@echo $(notdir $<)
 	@$(bin2o)
-
--include $(DEPENDS)
 
 #---------------------------------------------------------------------------------
 endif
