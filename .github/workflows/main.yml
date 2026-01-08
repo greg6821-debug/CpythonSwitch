@@ -27,13 +27,19 @@ jobs:
         key: ${{ runner.os }}-cpython-${{ hashFiles('setup.bash', 'cpython.patch') }}
     
     - name: Set up devkitPro
-      uses: devkitPro/actions/setup-devkit@v1
-      with:
-        pacman-packages: |
-          switch-dev
-          devkitARM
-          devkitA64
-          libnx
+      run: |
+        # Скачиваем и запускаем официальный установщик
+        wget https://github.com/devkitPro/installer/releases/latest/download/devkitpro-pacman-installer.pkg.tar.xz
+        sudo tar -xJf devkitpro-pacman-installer.pkg.tar.xz -C /
+        
+        # Инициализируем pacman и устанавливаем пакеты для Switch
+        sudo dkp-pacman -Syu
+        sudo dkp-pacman -S switch-dev devkitA64 libnx general-tools
+        
+        # Устанавливаем переменные окружения для последующих шагов
+        echo "DEVKITPRO=/opt/devkitpro" >> $GITHUB_ENV
+        echo "DEVKITA64=/opt/devkitpro/devkitA64" >> $GITHUB_ENV
+        echo "PATH=$DEVKITA64/bin:$PATH" >> $GITHUB_ENV
     
     - name: Setup build environment
       run: |
