@@ -25,6 +25,11 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Export devkitA64 env
+        run: |
+          echo "DEVKITA64=/opt/devkitpro/devkitA64" >> $GITHUB_ENV
+          echo "PATH=/opt/devkitpro/devkitA64/bin:$PATH" >> $GITHUB_ENV
+
       - name: Setup CPython for Switch
         run: |
           chmod +x setup.bash
