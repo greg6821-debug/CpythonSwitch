@@ -27,15 +27,13 @@ jobs:
         key: ${{ runner.os }}-cpython-${{ hashFiles('setup.bash', 'cpython.patch') }}
     
     - name: Set up devkitPro
-      run: |
-        echo "DEVKITPRO=/opt/devkitpro" >> $GITHUB_ENV
-        sudo mkdir -p $DEVKITPRO
-        wget https://raw.githubusercontent.com/devkitPro/pacman/release/devkitpro-pacman.repo
-        sudo cp devkitpro-pacman.repo /etc/pacman.d/devkitpro-pacman.repo
-        sudo pacman-key --recv 19E3D4AABEA8CA4A
-        sudo pacman-key --lsign 19E3D4AABEA8CA4A
-        sudo pacman --noconfirm -Syu devkitpro-keyring
-        sudo pacman --noconfirm -Syu switch-dev
+      uses: devkitPro/actions/setup-devkit@v1
+      with:
+        pacman-packages: |
+          switch-dev
+          devkitARM
+          devkitA64
+          libnx
     
     - name: Setup build environment
       run: |
