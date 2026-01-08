@@ -14,107 +14,61 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      
-    - name: Cache CPython source
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'recursive'
+    
+    - name: Cache CPython sources
       uses: actions/cache@v3
       with:
-        path: cpython
-        key: ${{ runner.os }}-cpython-3.9.22-${{ hashFiles('setup.bash') }}
-        restore-keys: |
-          ${{ runner.os }}-cpython-3.9.22-
+        path: |
+          cpython
+          venv
+        key: ${{ runner.os }}-cpython-${{ hashFiles('setup.bash', 'cpython.patch') }}
     
     - name: Set up devkitPro
       run: |
-        export DEVKITPRO=/opt/devkitpro
-        echo "DEVKITPRO=$DEVKITPRO" >> $GITHUB_ENV
-        
-        # Установка devkitPro
+        echo "DEVKITPRO=/opt/devkitpro" >> $GITHUB_ENV
         sudo mkdir -p $DEVKITPRO
-        sudo chown -R $USER:$USER $DEVKITPRO
-        
-        wget -q https://github.com/devkitPro/pacman/releases/latest/download/devkitpro-pacman.deb
-        sudo dpkg -i devkitpro-pacman.deb
-        
-        # Установка необходимых пакетов
-        sudo dkp-pacman -Syu --noconfirm \
-          switch-dev \
-          switch-portlibs \
-          devkitA64 \
-          aarch64-none-elf-binutils \
-          aarch64-none-elf-gcc \
-          aarch64-none-elf-newlib
-        
-        echo "/opt/devkitpro/portlibs/switch/lib" >> /etc/ld.so.conf
-        sudo ldconfig
-        
-    - name: Set up build environment
+        wget https://raw.githubusercontent.com/devkitPro/pacman/release/devkitpro-pacman.repo
+        sudo cp devkitpro-pacman.repo /etc/pacman.d/devkitpro-pacman.repo
+        sudo pacman-key --recv 19E3D4AABEA8CA4A
+        sudo pacman-key --lsign 19E3D4AABEA8CA4A
+        sudo pacman --noconfirm -Syu devkitpro-keyring
+        sudo pacman --noconfirm -Syu switch-dev
+    
+    - name: Setup build environment
       run: |
         chmod +x setup.bash
         ./setup.bash
-        
-    - name: Build CPython
+    
+    - name: Build CPython for Switch
       run: |
         chmod +x build.bash
         ./build.bash
-        
-    - name: Build NRO application
+    
+    - name: Build Switch NRO
       run: |
         cd switch
-        make -j$(nproc)
-        
-    - name: Create deployment package
+        make
+    
+    - name: Verify build artifacts
       run: |
-        mkdir -p dist
-        mkdir -p dist/switch
-        mkdir -p dist/sdmc
-        
-        # Копируем NRO
-        cp switch/build/python_switch.nro dist/switch/
-        
-        # Копируем структуру Python для SD-карты
-        cp -r sdmc/* dist/sdmc/
-        
-        # Создаем README
-        cat > dist/README.txt << 'EOF'
-        === Python 3.9 for Nintendo Switch ===
-        
-        Installation:
-        1. Copy everything from 'sdmc/' folder to the root of your SD card
-        2. Copy 'python_switch.nro' to /switch/ folder on your SD card
-        3. Run from Homebrew Menu
-        
-        Structure on SD card:
-        /sdmc/python/           - Python installation
-        /sdmc/python/main.py    - Main script (can be modified)
-        /switch/python_switch.nro - Python launcher
-        
-        To run your own scripts:
-        1. Edit or replace sdmc:/python/main.py
-        2. Or create new scripts in sdmc:/python/
-        3. Import them from main.py
-        
-        Tested on: Atmosphere CFW, Firmware 16.0.0+
-        EOF
-        
+        echo "Checking build artifacts..."
+        ls -la python39-switch/sd_layout/python/lib/
+        if [ -f switch/python_switch.nro ]; then
+          echo "✓ NRO file built successfully"
+          file switch/python_switch.nro
+        else
+          echo "✗ NRO file not found!"
+          exit 1
+        fi
+    
     - name: Upload artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v3
       with:
         name: python-switch-build
         path: |
-          dist/
-          python39-switch/
+          python39-switch/sd_layout/
+          switch/python_switch.nro
         retention-days: 7
-        
-    - name: Create release archive
-      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
-      run: |
-        cd dist
-        zip -r ../python-switch-release.zip .
-        
-    - name: Upload release
-      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
-      uses: softprops/action-gh-release@v1
-      with:
-        files: python-switch-release.zip
