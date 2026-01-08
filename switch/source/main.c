@@ -10,7 +10,7 @@ int main(int argc, char* argv[])
 
     PyRun_SimpleString(
         "import sys\n"
-        "sys.path.insert(0, 'romfs:/python')\n"
+        "sys.path.insert(0, 'sdmc:/python')\n"
         "import test_renpy\n"
     );
 
