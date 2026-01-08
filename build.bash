@@ -1,37 +1,44 @@
-#!/bin/bash
 set -e
 
-echo "=== Building Python 3.9 for Nintendo Switch ==="
-
 export DEVKITPRO=/opt/devkitpro
-export DEVKITA64=/opt/devkitpro/devkitA64
-export PATH=$DEVKITPRO/tools/bin:$PATH
 
-cd CPython-3.9.22
+source $DEVKITPRO/switchvars.sh
+pushd cpython
+mkdir build-switch
+cp ../cpython_config_files/config.site build-switch
+pushd build-switch
+mkdir local_prefix
+export LOCAL_PREFIX=$(realpath local_prefix)
+../configure \
+  --host=aarch64-none-elf \
+  --build=$(../config.guess) \
+  --prefix="$LOCAL_PREFIX" \
+  --disable-ipv6 \
+  --disable-shared \
+  --without-pymalloc \
+  LDFLAGS="-specs=$DEVKITPRO/libnx/switch.specs $LDFLAGS" \
+  CONFIG_SITE="config.site"
+popd
+cp ../cpython_config_files/Setup.local build-switch/Modules
+pushd build-switch
+make -j $(getconf _NPROCESSORS_ONLN) libpython3.9.a
+mkdir -p $LOCAL_PREFIX/lib
+cp libpython3.9.a $LOCAL_PREFIX/lib/libpython3.9.a
+make libinstall
+make inclinstall
+popd
+popd
 
-# Конфигурация для AArch64 (Switch)
-./configure \
-    --host=aarch64-none-elf \
-    --build=$(./config.guess) \
-    --disable-ipv6 \
-    --without-ensurepip \
-    --with-system-ffi \
-    --enable-optimizations \
-    ac_cv_file__dev_ptmx=no \
-    ac_cv_file__dev_ptc=no \
-    ac_cv_have_long_long_format=yes
+mkdir -p ./python39-switch
 
-# Сборка
-make -j$(nproc) python
+mv $LOCAL_PREFIX/* ./python39-switch/
 
-# КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Компиляция байт-кода с помощью ЦЕЛЕВОГО интерпретатора
-echo "Compiling Python bytecode with target interpreter..."
-./python -OO -m compileall lib/
-
-# Копирование результата
-cd ..
-mkdir -p python39-switch
-cp -r CPython-3.9.22/build/lib.*/ python39-switch/
-cp CPython-3.9.22/python python39-switch/
-
-echo "=== Build completed successfully ==="
+pushd python39-switch/lib/python3.9
+rm -r test
+rm -r lib2to3/tests
+rm subprocess.py
+cp ../../../stub/subprocess.py ./
+find . -type l -not -name \*.py -delete
+find . -type d -empty -delete
+find . -name \*.py -exec python3 -OO -m py_compile {} \;
+popd
