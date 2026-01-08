@@ -1,152 +1,65 @@
 #---------------------------------------------------------------------------------
-.SUFFIXES:
+# Базовые настройки для Switch
 #---------------------------------------------------------------------------------
-
-ifeq ($(strip $(DEVKITPRO)),)
-$(error "Please set DEVKITPRO in your environment. export DEVKITPRO=<path to>devkitpro")
-endif
-
-ifeq ($(strip $(DEVKITA64)),)
-$(error "Please set DEVKITA64 in your environment. export DEVKITA64=<path to>devkitA64")
-endif
-
-TOPDIR ?= $(CURDIR)
-include $(DEVKITPRO)/libnx/switch_rules
+TARGET      := python_launcher
+BUILD       := build
+SOURCES     := source
+INCLUDES    := include
+LIBDIRS     := ../python39-switch/lib
 
 #---------------------------------------------------------------------------------
-# TARGET is the name of the output
-# BUILD is the directory where object files & intermediate files will be placed
-# SOURCES is a list of directories containing source code
-# DATA is a list of directories containing data files
-# INCLUDES is a list of directories containing header files
-# ROMFS is the directory containing data to be added to RomFS
+# Использование инструментов devkitA64
 #---------------------------------------------------------------------------------
-TARGET		:=	python_switch
-BUILD		:=	build
-SOURCES		:=	source
-DATA		:=	data
-INCLUDES	:=	include
+export PATH := $(PATH):/opt/devkitpro/devkitA64/bin
 
-# Path to Python installation (relative or absolute)
-PYTHON_INSTALL	:=	../python39-switch
-PYTHON_INCLUDE	:=	$(PYTHON_INSTALL)/include/python3.9
-PYTHON_LIB		:=	$(PYTHON_INSTALL)/lib/libpython3.9.a
-
-# Check if Python library exists
-ifeq ($(wildcard $(PYTHON_LIB)),)
-$(error "Python library not found at $(PYTHON_LIB). Build Python first!")
-endif
+PREFIX  := aarch64-none-elf-
+CC      := $(PREFIX)gcc
+CXX     := $(PREFIX)g++
+AS      := $(PREFIX)as
+LD      := $(PREFIX)gcc
+OBJCOPY := $(PREFIX)objcopy
+STRIP   := $(PREFIX)strip
 
 #---------------------------------------------------------------------------------
-# options for code generation
+# Флаги компиляции и линковки
 #---------------------------------------------------------------------------------
-ARCH	:=	-march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE
+ARCH := -march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE
 
-CFLAGS	:=	-g -Wall -O2 -ffunction-sections \
-			$(ARCH) $(DEFINES)
+CFLAGS   := -g -Wall -O2 -ffunction-sections $(ARCH) $(INCLUDE)
+CXXFLAGS := $(CFLAGS) -fno-rtti -fno-exceptions
+ASFLAGS  := -g $(ARCH)
+LDFLAGS  := -specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) -Wl,-Map,$(TARGET).map
 
-CFLAGS	+=	$(INCLUDE) -D__SWITCH__ -I$(PYTHON_INCLUDE)
-
-CXXFLAGS	:=	$(CFLAGS) -fno-rtti -fno-exceptions
-
-ASFLAGS	:=	-g $(ARCH)
-LDFLAGS	=	-specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
-
-LIBS	:=	-lnx $(PYTHON_LIB) -lstdc++ -lm -lz
+# ИСПРАВЛЕНИЕ: Используем правильное имя библиотеки Python
+LIBS := -lpython3.9 -lnx
 
 #---------------------------------------------------------------------------------
-# list of directories containing libraries, this must be the top level containing
-# include and lib
+# Сборка списка исходных файлов
 #---------------------------------------------------------------------------------
-LIBDIRS	:=	$(PORTLIBS) $(LIBNX) $(PYTHON_INSTALL)/lib
+CFILES   := $(shell find $(SOURCES) -name '*.c')
+CPPFILES := $(shell find $(SOURCES) -name '*.cpp')
+SFILES   := $(shell find $(SOURCES) -name '*.s')
+OFILES   := $(CFILES:.c=.o) $(CPPFILES:.cpp=.o) $(SFILES:.s=.o)
 
 #---------------------------------------------------------------------------------
-# no real need to edit anything past this point unless you need to add additional
-# rules for different file extensions
+# Правила сборки
 #---------------------------------------------------------------------------------
-ifneq ($(BUILD),$(notdir $(CURDIR)))
-#---------------------------------------------------------------------------------
+all: $(TARGET).nro
 
-export OUTPUT	:=	$(CURDIR)/$(TARGET)
-export TOPDIR	:=	$(CURDIR)
+$(TARGET).nro: $(TARGET).elf
+    @echo "Creating NRO..."
+    @elf2nro $< $@ --icon=../icon.jpg --nacp=../control.nacp
 
-export VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir)) \
-					$(foreach dir,$(DATA),$(CURDIR)/$(dir))
+$(TARGET).elf: $(OFILES)
+    @echo "Linking ELF..."
+    @$(LD) $(LDFLAGS) $(OFILES) $(LIBDIRS:%=-L%) $(LIBS) -o $@
 
-export DEPSDIR	:=	$(CURDIR)/$(BUILD)
+%.o: %.c
+    @echo "Compiling $<..."
+    @$(CC) $(CFLAGS) -c $< -o $@
 
-CFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
-CPPFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
-SFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
-BINFILES	:=	$(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/*.*)))
-
-#---------------------------------------------------------------------------------
-# use CXX for linking C++ projects, CC for standard C
-#---------------------------------------------------------------------------------
-ifeq ($(strip $(CPPFILES)),)
-#---------------------------------------------------------------------------------
-	export LD	:=	$(CC)
-#---------------------------------------------------------------------------------
-else
-#---------------------------------------------------------------------------------
-	export LD	:=	$(CXX)
-#---------------------------------------------------------------------------------
-endif
-#---------------------------------------------------------------------------------
-
-export OFILES_BIN	:=	$(addsuffix .o,$(BINFILES))
-export OFILES_SRC	:=	$(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
-export OFILES 	:=	$(OFILES_BIN) $(OFILES_SRC)
-export HFILES_BIN	:=	$(addsuffix .h,$(subst .,_,$(BINFILES)))
-
-export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
-					-I$(PYTHON_INCLUDE) \
-					$(foreach dir,$(LIBDIRS),-I$(dir)/include) \
-					-I$(CURDIR)/$(BUILD)
-
-export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib)
-
-.PHONY: $(BUILD) clean all
-
-#---------------------------------------------------------------------------------
-all: $(BUILD)
-
-$(BUILD):
-	@[ -d $@ ] || mkdir -p $@
-	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
-
-#---------------------------------------------------------------------------------
 clean:
-	@echo clean ...
-	@rm -fr $(BUILD) $(TARGET).nro $(TARGET).nacp $(TARGET).elf
+    @echo "Cleaning..."
+    @rm -rf $(BUILD) $(TARGET).elf $(TARGET).nro $(OFILES)
 
-#---------------------------------------------------------------------------------
-else
-.PHONY:	all
-
-DEPENDS	:=	$(OFILES:.o=.d)
-
-#---------------------------------------------------------------------------------
-# main targets
-#---------------------------------------------------------------------------------
-all	:	$(OUTPUT).nro
-
-$(OUTPUT).nro	:	$(OUTPUT).elf $(OUTPUT).nacp
-
-$(OUTPUT).elf	:	$(OFILES)
-
-$(OUTPUT).nacp	:	$(OFILES)
-
--include $(DEPENDS)
-
-#---------------------------------------------------------------------------------
-# you need a rule like this for each extension you use as binary data
-#---------------------------------------------------------------------------------
-%.bin.o	%_bin.h :	%.bin
-#---------------------------------------------------------------------------------
-	@echo $(notdir $<)
-	@$(bin2o)
-
-#---------------------------------------------------------------------------------
-endif
-#---------------------------------------------------------------------------------
+.PHONY: all clean
