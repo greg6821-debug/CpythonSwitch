@@ -1,98 +1,44 @@
 #!/bin/bash
+set -e
 
-set -e  # Выход при ошибке
+cd cpython
 
-echo "=== Building CPython 3.9 for Nintendo Switch ==="
-
-# Настройка путей
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TOP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-CPYTHON_DIR="$TOP_DIR/cpython"
-BUILD_DIR="$TOP_DIR/build"
-INSTALL_DIR="$TOP_DIR/python39-switch"
-SDMC_DIR="$TOP_DIR/sdmc"
-
-# Создаем директории
-mkdir -p "$BUILD_DIR"
-mkdir -p "$INSTALL_DIR"
-mkdir -p "$SDMC_DIR/python"
-
-# Проверяем наличие исходников CPython
-if [ ! -d "$CPYTHON_DIR" ]; then
-    echo "Error: CPython source not found at $CPYTHON_DIR"
-    echo "Please run setup.bash first"
-    exit 1
-fi
-
-cd "$BUILD_DIR"
-
-echo "Configuring CPython for Switch (AArch64)..."
-
-# Конфигурация для Switch
-"$CPYTHON_DIR/configure" \
-    --host=aarch64-none-elf \
-    --build=x86_64-pc-linux-gnu \
-    --prefix="$INSTALL_DIR" \
-    --disable-shared \
-    --enable-optimizations \
-    --with-system-ffi \
-    --with-ensurepip=no \
-    --without-readline \
-    --enable-ipv6 \
-    ac_cv_file__dev_ptmx=no \
-    ac_cv_file__dev_ptc=no \
-    ac_cv_have_long_long_format=yes
+# Используем целевой Python для компиляции байт-кода после сборки
+echo "Configuring CPython for Switch..."
+./configure --host=aarch64-none-elf --build=x86_64-linux-gnu \
+    --disable-ipv6 --prefix=$(pwd)/../python39-switch \
+    --enable-optimizations
 
 echo "Building CPython..."
+make -j$(nproc)
 
-# Компилируем только нужные компоненты
-make -j$(nproc) python python.bin libpython3.9.a
+echo "Installing CPython to local directory..."
+make install
 
-echo "Installing CPython to $INSTALL_DIR..."
+cd ..
 
-# Устанавливаем минимальный набор
-make install DESTDIR="" prefix="$INSTALL_DIR"
+# Копируем необходимые библиотеки
+echo "Copying libraries..."
+mkdir -p python39-switch/lib
+cp cpython/libpython3.9.a python39-switch/lib/
 
-# Создаем структуру для SD-карты
-echo "Preparing SD card structure..."
-cp -r "$INSTALL_DIR/lib/python3.9" "$SDMC_DIR/python/lib"
-cp -r "$INSTALL_DIR/include" "$SDMC_DIR/python/include"
+echo "Creating directory structure on SD card..."
+mkdir -p python39-switch/sd_layout/python
+mkdir -p python39-switch/sd_layout/python/lib
+mkdir -p python39-switch/sd_layout/python/userlib
 
-# Компилируем байт-код Python для целевой архитектуры
-echo "Compiling Python bytecode for AArch64..."
-# Используем хост-интерпретатор с явным указанием версии
-cd "$INSTALL_DIR"
-python3.9 -m compileall -f -q lib/python3.9
+# Копируем стандартную библиотеку Python
+echo "Copying Python standard library..."
+cp -r python39-switch/lib/python3.9/* python39-switch/sd_layout/python/lib/
 
-# Копируем скомпилированный байт-код на SD-карту
-cp -r lib/python3.9/__pycache__ "$SDMC_DIR/python/lib/python3.9/" 2>/dev/null || true
+# Компилируем байт-код с помощью только что собранного Python
+echo "Compiling Python bytecode for Switch..."
+# Временно переключаемся на использование cross-компилятора для компиляции .pyc
+# Этот шаг можно пропустить, если возникают проблемы
+# python39-switch/bin/python3.9 -OO -m compileall python39-switch/sd_layout/python/lib/ -q
 
-# Создаем пример main.py для SD-карты
-cat > "$SDMC_DIR/python/main.py" << 'EOF'
-print("=" * 50)
-print("Python 3.9 on Nintendo Switch")
-print("=" * 50)
-print(f"Platform: {__import__('sys').platform}")
-print(f"Version: {__import__('sys').version}")
-print(f"Path: {__import__('sys').path}")
-print()
-
-# Простой тест
-try:
-    import math
-    print(f"Math module loaded: pi = {math.pi:.5f}")
-except Exception as e:
-    print(f"Error loading math: {e}")
-
-print()
-print("Ready for interactive mode...")
-EOF
-
-echo "=== Build complete! ==="
-echo "Installation directory: $INSTALL_DIR"
-echo "SD card structure: $SDMC_DIR"
-echo ""
-echo "To deploy to Switch:"
-echo "1. Copy contents of '$SDMC_DIR' to root of your SD card"
-echo "2. Copy the compiled NRO to /switch/ on your SD card"
-echo "3. Run from Homebrew Menu"
+echo "Build complete!"
+echo "To run on Switch:"
+echo "1. Copy everything from 'python39-switch/sd_layout/' to root of your SD card"
+echo "2. Copy 'switch/python_switch.nro' to 'switch/python_switch.nro' on SD card"
+echo "3. Run via Homebrew Launcher"
