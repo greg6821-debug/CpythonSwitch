@@ -91,3 +91,13 @@ xxsubtype xxsubtype.c
 # spwd
 # sunaudiodev
 # syslog
+
+*disabled*
+_sqlite3
+_ssl
+_hashlib
+_bz2
+_lzma
+_socket
+_asyncio
+_select
