@@ -1,34 +1,67 @@
-#include <stdio.h>
 #include <Python.h>
+#include <switch.h>
+#include <stdio.h>
+#include <string.h>
 
-int main(int argc, char **argv) {
+int main(int argc, char* argv[]) {
+    consoleInit(NULL);
+    
+    printf("Initializing Python for Switch...\n");
+    consoleUpdate(NULL);
+    
     // Устанавливаем домашний каталог Python на SD-карту
     Py_SetPythonHome(L"sdmc:/python");
     
-    // Инициализируем Python
+    // Добавляем пути для поиска модулей
+    wchar_t pythonPath[512];
+    swprintf(pythonPath, sizeof(pythonPath) / sizeof(wchar_t),
+             L"sdmc:/python/lib/python3.9:"
+             L"sdmc:/python/lib/python3.9/lib-dynload:"
+             L"sdmc:/python/lib/python3.9/site-packages");
+    Py_SetPath(pythonPath);
+    
+    // Инициализируем интерпретатор
     if (!Py_Initialize()) {
-        printf("Failed to initialize Python.\n");
+        printf("ERROR: Failed to initialize Python!\n");
+        consoleUpdate(NULL);
+        svcSleepThread(3000000000ULL);
+        consoleExit(NULL);
         return 1;
     }
     
-    // Добавляем путь к пользовательским модулям на SD-карту
-    PyRun_SimpleString("import sys; sys.path.append('sdmc:/python/lib'); sys.path.append('sdmc:/python/userlib')");
+    printf("Python initialized successfully\n");
     
-    // Простой тест Python
-    PyRun_SimpleString("print('Hello from Python on Switch!')\n"
-                       "print('Python version:', sys.version)\n");
+    // Устанавливаем sys.argv
+    wchar_t* wargv[1] = { L"switch_python" };
+    PySys_SetArgv(1, wargv);
     
-    // Если передан аргумент - скрипт для запуска
-    if (argc > 1) {
-        FILE* script = fopen(argv[1], "r");
-        if (script) {
-            PyRun_SimpleFile(script, argv[1]);
-            fclose(script);
-        } else {
-            printf("Cannot open script: %s\n", argv[1]);
-        }
+    // Проверяем работоспособность
+    PyRun_SimpleString(
+        "import sys\n"
+        "print('Python version:', sys.version)\n"
+        "print('Platform:', sys.platform)\n"
+        "print('Path:', sys.path)\n"
+        "print('Hello from Python on Nintendo Switch!')\n"
+    );
+    
+    if (Py_FinalizeEx() < 0) {
+        printf("ERROR: Python finalization failed\n");
     }
     
-    Py_Finalize();
+    printf("\nPress + to exit...\n");
+    
+    // Ожидание нажатия кнопки
+    while (appletMainLoop()) {
+        hidScanInput();
+        u64 kDown = hidKeysDown(CONTROLLER_P1_AUTO);
+        
+        if (kDown & KEY_PLUS) {
+            break;
+        }
+        
+        consoleUpdate(NULL);
+    }
+    
+    consoleExit(NULL);
     return 0;
 }
